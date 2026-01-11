@@ -1,0 +1,20 @@
+{
+  "name": "NeuroStride",
+  "short_name": "Stride",
+  "description": "Adaptive Run Tracking for Half Marathon 2026",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/5717/5717204.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#475569",
+  "background_color": "#1e293b",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
