@@ -1,5 +1,5 @@
 {
-  "name": "NeuroStride",
+  "name": "Outrun",
   "short_name": "Stride",
   "description": "Adaptive Run Tracking for Half Marathon 2026",
   "icons": [
@@ -12,8 +12,8 @@
   ],
   "start_url": "./",
   "display": "standalone",
-  "theme_color": "#475569",
-  "background_color": "#1e293b",
+  "theme_color": "#FFFFFF",
+  "background_color": "#F0F7FF",
   "requestFramePermissions": [
     "camera"
   ]

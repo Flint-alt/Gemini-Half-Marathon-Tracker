@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>NeuroStride | Elite Adaptive Performance</title>
+    <title>Outrun | Elite Adaptive Performance</title>
     
     <!-- PWA / Mobile Home Screen Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="NeuroStride">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Outrun">
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/5717/5717204.png">
     
@@ -18,22 +18,72 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+      :root {
+        /* Gemini Theme (Default) */
+        --bg-gradient: linear-gradient(180deg, #FFFFFF 0%, #F0F7FF 50%, #F5F3FF 100%);
+        --text-primary: #1F2937;
+        --glass-bg: rgba(255, 255, 255, 0.9);
+        --glass-border: transparent;
+      }
+
+      .dark-mode {
+        /* Elite Adaptive Dark Mode */
+        --bg-gradient: radial-gradient(circle at 50% 0%, #475569 0%, #1e293b 100%);
+        --text-primary: #f1f5f9;
+        --glass-bg: rgba(30, 41, 59, 0.5);
+        --glass-border: rgba(255, 255, 255, 0.15);
+      }
+
       body {
         font-family: 'Plus Jakarta Sans', sans-serif;
-        background: radial-gradient(circle at 50% 0%, #475569 0%, #1e293b 100%);
+        background: var(--bg-gradient);
         background-attachment: fixed;
-        color: #f1f5f9;
+        color: var(--text-primary);
         -webkit-tap-highlight-color: transparent;
         overflow-x: hidden;
         padding-top: env(safe-area-inset-top);
         padding-bottom: env(safe-area-inset-bottom);
+        transition: background 0.5s ease, color 0.3s ease;
       }
+      
       .premium-glass {
-        background: rgba(30, 41, 59, 0.5);
         backdrop-filter: blur(32px) saturate(180%);
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        transition: background 0.5s ease, border 0.5s ease, box-shadow 0.5s ease;
+        
+        /* Gemini Light Styles (Default) */
+        background: 
+          linear-gradient(var(--glass-bg), var(--glass-bg)) padding-box,
+          linear-gradient(135deg, #93c5fd 0%, #c4b5fd 50%, #f9a8d4 100%) border-box;
+        border: 1px solid transparent;
+        box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 10px 25px -3px rgba(37, 99, 235, 0.05);
       }
+      
+      .premium-glass:hover {
+        background: 
+          linear-gradient(var(--glass-bg), var(--glass-bg)) padding-box,
+          linear-gradient(135deg, #60a5fa 0%, #a78bfa 50%, #f472b6 100%) border-box;
+      }
+
+      .dark-mode .premium-glass {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.2);
+      }
+      
+      .dark-mode .premium-glass:hover {
+        /* Reset hover for dark mode */
+        background: var(--glass-bg);
+      }
+      
+      /* Signature Gemini Gradient Text */
+      .gemini-text {
+        background: linear-gradient(90deg, #1a73e8 0%, #8b5cf6 50%, #d946ef 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: 900;
+      }
+
       .edge-border {
         position: relative;
       }
@@ -77,9 +127,23 @@
         100% { transform: translateY(500px); opacity: 0; }
       }
 
+      /* Scrollbar */
       ::-webkit-scrollbar { width: 6px; }
       ::-webkit-scrollbar-track { background: transparent; }
-      ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+      /* Default (Light) Scrollbar */
+      ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
+      /* Dark Mode Scrollbar */
+      .dark-mode ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); }
+
+      /* Hide number input arrows for a cleaner UI */
+      input[type=number]::-webkit-inner-spin-button, 
+      input[type=number]::-webkit-outer-spin-button { 
+        -webkit-appearance: none; 
+        margin: 0; 
+      }
+      input[type=number] {
+        -moz-appearance: textfield;
+      }
     </style>
     <script type="importmap">
     {
@@ -96,7 +160,6 @@
   </head>
   <body>
     <div id="root"></div>
-    <!-- CRITICAL: Path must be relative ./ for GitHub Pages subfolders -->
     <script type="module" src="./index.tsx"></script>
   </body>
 </html>

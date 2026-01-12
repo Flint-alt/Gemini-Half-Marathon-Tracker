@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { RunData, UserProfile, CoachingInsight } from "../types";
 
@@ -13,6 +14,7 @@ const cleanJson = (text: string) => {
 
 export const analyzeRunScreenshot = async (base64Image: string): Promise<Partial<RunData>> => {
   try {
+    // Correct initialization with named parameter
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     const response = await ai.models.generateContent({
@@ -50,6 +52,7 @@ export const analyzeRunScreenshot = async (base64Image: string): Promise<Partial
       }
     });
 
+    // Use property access .text (not .text())
     const text = response.text;
     if (!text) throw new Error("Empty response from Neural Engine.");
     
@@ -71,6 +74,7 @@ export const getCoachingAdvice = async (
   profile: UserProfile
 ): Promise<CoachingInsight> => {
   try {
+    // Correct initialization with named parameter
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     const prompt = `
@@ -99,6 +103,7 @@ export const getCoachingAdvice = async (
       }
     });
 
+    // Use property access .text (not .text())
     const text = response.text;
     if (!text) throw new Error("No coaching text returned.");
     return JSON.parse(cleanJson(text));

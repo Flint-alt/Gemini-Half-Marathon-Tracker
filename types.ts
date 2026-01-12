@@ -8,7 +8,7 @@ export interface RunData {
   avgCadence?: number;
   notes?: string;
   source: 'manual' | 'upload';
-  type: 'parkrun' | 'long' | 'other';
+  type: 'parkrun' | 'long' | 'easy' | 'treadmill' | 'other';
   completedGym?: boolean;
   bodyweightCount?: number;
 }
