@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>NeuroStride | Elite Adaptive Performance</title>
     
     <!-- PWA / Mobile Home Screen Tags -->
@@ -11,7 +11,9 @@
     <meta name="apple-mobile-web-app-title" content="NeuroStride">
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/5717/5717204.png">
-    <link rel="manifest" href="metadata.json">
+    
+    <!-- Relative path for manifest -->
+    <link rel="manifest" href="./metadata.json">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -23,7 +25,6 @@
         color: #f1f5f9;
         -webkit-tap-highlight-color: transparent;
         overflow-x: hidden;
-        /* Safe area padding for notched phones */
         padding-top: env(safe-area-inset-top);
         padding-bottom: env(safe-area-inset-bottom);
       }
@@ -62,7 +63,7 @@
         box-shadow: 0 0 25px #818cf8;
         animation: scan 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
         z-index: 20;
-        display: none; /* Disabled by default */
+        display: none;
       }
 
       .scanning-active .scanning-line {
@@ -76,11 +77,6 @@
         100% { transform: translateY(500px); opacity: 0; }
       }
 
-      .inner-glow {
-        box-shadow: inset 0 0 40px rgba(0,0,0,0.2);
-      }
-
-      /* Scrollbar */
       ::-webkit-scrollbar { width: 6px; }
       ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
@@ -100,6 +96,7 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="index.tsx"></script>
+    <!-- CRITICAL: Path must be relative ./ for GitHub Pages subfolders -->
+    <script type="module" src="./index.tsx"></script>
   </body>
 </html>
