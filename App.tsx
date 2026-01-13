@@ -237,17 +237,17 @@ const App: React.FC = () => {
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-10">
-                <div className="p-6 rounded-[28px] border bg-white/5 border-white/10">
+                <div className={`p-6 rounded-[28px] border bg-white/5 border-white/10`}>
                   <p className="text-[10px] font-black uppercase text-slate-500 mb-2">Short Goal</p>
-                  <p className="text-2xl font-black text-white">{currentWeek.plannedParkrunKm}KM</p>
+                  <p className={`text-2xl font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{currentWeek.plannedParkrunKm}KM</p>
                 </div>
-                <div className="p-6 rounded-[28px] border bg-white/5 border-white/10">
+                <div className={`p-6 rounded-[28px] border bg-white/5 border-white/10`}>
                   <p className="text-[10px] font-black uppercase text-slate-500 mb-2">Long Goal</p>
-                  <p className="text-2xl font-black text-white">{currentWeek.plannedLongRunKm}KM</p>
+                  <p className={`text-2xl font-black ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{currentWeek.plannedLongRunKm}KM</p>
                 </div>
-                <div className="p-6 rounded-[28px] border bg-white/5 border-white/10">
+                <div className={`p-6 rounded-[28px] border bg-white/5 border-white/10`}>
                   <p className="text-[10px] font-black uppercase text-slate-500 mb-2">Objective</p>
-                  <p className="text-xl font-black text-white truncate">{currentWeek.milestone || 'Steady'}</p>
+                  <p className={`text-xl font-black truncate ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{currentWeek.milestone || 'Steady'}</p>
                 </div>
               </div>
             </div>
@@ -259,6 +259,11 @@ const App: React.FC = () => {
     }
   };
 
+  const inputBgClass = theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200';
+  const inputTextClass = theme === 'dark' ? 'text-white' : 'text-slate-900';
+  const modalBgClass = theme === 'dark' ? 'backdrop-blur-2xl bg-slate-950/80' : 'backdrop-blur-2xl bg-slate-100/80';
+  const modalHeaderClass = theme === 'dark' ? 'text-white' : 'text-slate-900';
+
   return (
     <div className={`min-h-screen p-4 sm:p-8 lg:p-12 max-w-7xl mx-auto space-y-12`}>
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-8 mb-16">
@@ -267,19 +272,19 @@ const App: React.FC = () => {
             <div className="w-12 h-12 rounded-[18px] bg-indigo-500 flex items-center justify-center shadow-xl shadow-indigo-500/20">
               <Route className="text-white w-7 h-7" />
             </div>
-            <h1 className="text-4xl font-black tracking-tighter uppercase italic text-white">Outrun</h1>
+            <h1 className={`text-4xl font-black tracking-tighter uppercase italic ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Outrun</h1>
           </div>
           <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-500">Neural Performance Tracking System</p>
         </div>
         
         <div className="flex flex-wrap gap-4">
-          <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="p-4 rounded-[22px] bg-white/5 border border-white/10 hover:bg-white/10 transition-all">
+          <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className={`p-4 rounded-[22px] border transition-all ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200 shadow-sm'}`}>
             {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-indigo-600" />}
           </button>
-          <button onClick={() => setIsArchitectMode(!isArchitectMode)} className={`p-4 rounded-[22px] border transition-all ${isArchitectMode ? 'bg-indigo-500 border-indigo-400 text-white' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}>
+          <button onClick={() => setIsArchitectMode(!isArchitectMode)} className={`p-4 rounded-[22px] border transition-all ${isArchitectMode ? 'bg-indigo-500 border-indigo-400 text-white' : theme === 'dark' ? 'bg-white/5 border-white/10 text-slate-400' : 'bg-white border-slate-200 text-slate-400'}`}>
             <LayoutGrid className="w-5 h-5" />
           </button>
-          <button onClick={() => setShowWeightInput(true)} className="flex items-center gap-3 px-6 py-4 rounded-[22px] bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-black uppercase text-[10px] tracking-widest text-slate-300">
+          <button onClick={() => setShowWeightInput(true)} className={`flex items-center gap-3 px-6 py-4 rounded-[22px] border transition-all font-black uppercase text-[10px] tracking-widest ${theme === 'dark' ? 'bg-white/5 border-white/10 text-slate-300' : 'bg-white border-slate-200 text-slate-600 shadow-sm'}`}>
             <Scale className="w-4 h-4" /> Log Weight
           </button>
           <button onClick={() => setShowManualRunInput(true)} className="flex items-center gap-3 px-8 py-4 rounded-[22px] bg-indigo-600 hover:bg-indigo-500 transition-all text-white font-black uppercase text-[10px] tracking-widest shadow-2xl shadow-indigo-500/20">
@@ -300,8 +305,8 @@ const App: React.FC = () => {
           
           <div className="premium-glass rounded-[40px] p-10">
             <h3 className="text-[10px] font-black uppercase tracking-[0.4em] mb-8 text-indigo-400">Bio-Ingestion</h3>
-            <label className="flex flex-col items-center justify-center p-12 rounded-[32px] border-2 border-dashed border-white/10 hover:border-indigo-500/50 transition-all cursor-pointer group">
-              <Upload className={`w-10 h-10 mb-4 transition-all group-hover:scale-110 ${isUploading ? 'animate-bounce text-indigo-400' : 'text-slate-600'}`} />
+            <label className={`flex flex-col items-center justify-center p-12 rounded-[32px] border-2 border-dashed transition-all cursor-pointer group ${theme === 'dark' ? 'border-white/10' : 'border-slate-200'}`}>
+              <Upload className={`w-10 h-10 mb-4 transition-all group-hover:scale-110 ${isUploading ? 'animate-bounce text-indigo-400' : 'text-slate-400'}`} />
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Sync Strava Visual</p>
               <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
             </label>
@@ -311,36 +316,36 @@ const App: React.FC = () => {
 
       {/* Manual Run Modal */}
       {showManualRunInput && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-2xl bg-slate-950/80">
-          <div className="premium-glass rounded-[48px] p-10 w-full max-w-xl border border-white/10 shadow-2xl animate-in zoom-in duration-300">
+        <div className={`fixed inset-0 z-[100] flex items-center justify-center p-6 ${modalBgClass}`}>
+          <div className={`premium-glass rounded-[48px] p-10 w-full max-w-xl border shadow-2xl animate-in zoom-in duration-300 ${theme === 'dark' ? 'border-white/10' : 'border-transparent'}`}>
             <div className="flex justify-between items-center mb-10">
-              <h2 className="text-2xl font-black tracking-tighter uppercase text-white">{editingRunId ? 'Edit' : 'Log'} Session</h2>
-              <button onClick={() => { setShowManualRunInput(false); setEditingRunId(null); }} className="p-3 rounded-2xl bg-white/5 hover:bg-white/10"><X className="w-6 h-6 text-slate-400" /></button>
+              <h2 className={`text-2xl font-black tracking-tighter uppercase ${modalHeaderClass}`}>{editingRunId ? 'Edit' : 'Log'} Session</h2>
+              <button onClick={() => { setShowManualRunInput(false); setEditingRunId(null); }} className={`p-3 rounded-2xl ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-200 hover:bg-slate-300'}`}><X className={`w-6 h-6 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`} /></button>
             </div>
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">Distance (KM)</label>
-                  <input type="number" step="0.01" value={manualRun.distance} onChange={e => setManualRun({...manualRun, distance: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-white font-black text-xl focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="0.00" />
+                  <input type="number" step="0.01" value={manualRun.distance} onChange={e => setManualRun({...manualRun, distance: e.target.value})} className={`w-full border rounded-2xl p-5 font-black text-xl focus:ring-2 focus:ring-indigo-500 outline-none ${inputBgClass} ${inputTextClass}`} placeholder="0.00" />
                 </div>
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">Duration (HH:MM:SS)</label>
-                  <input type="text" value={manualRun.duration} onChange={e => setManualRun({...manualRun, duration: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-white font-black text-xl focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="00:00:00" />
+                  <input type="text" value={manualRun.duration} onChange={e => setManualRun({...manualRun, duration: e.target.value})} className={`w-full border rounded-2xl p-5 font-black text-xl focus:ring-2 focus:ring-indigo-500 outline-none ${inputBgClass} ${inputTextClass}`} placeholder="00:00:00" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">Date</label>
-                  <input type="date" value={manualRun.date} onChange={e => setManualRun({...manualRun, date: e.target.value})} className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-white font-black outline-none" />
+                  <input type="date" value={manualRun.date} onChange={e => setManualRun({...manualRun, date: e.target.value})} className={`w-full border rounded-2xl p-5 font-black outline-none ${inputBgClass} ${inputTextClass}`} />
                 </div>
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">Type</label>
-                  <select value={manualRun.type} onChange={e => setManualRun({...manualRun, type: e.target.value as any})} className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-white font-black outline-none appearance-none">
-                    <option value="long">Long Run</option>
-                    <option value="parkrun">Parkrun</option>
-                    <option value="easy">Easy</option>
-                    <option value="treadmill">Treadmill</option>
-                    <option value="other">Other</option>
+                  <select value={manualRun.type} onChange={e => setManualRun({...manualRun, type: e.target.value as any})} className={`w-full border rounded-2xl p-5 font-black outline-none appearance-none ${inputBgClass} ${inputTextClass}`}>
+                    <option value="long" className={theme === 'dark' ? 'bg-slate-900' : 'bg-white'}>Long Run</option>
+                    <option value="parkrun" className={theme === 'dark' ? 'bg-slate-900' : 'bg-white'}>Parkrun</option>
+                    <option value="easy" className={theme === 'dark' ? 'bg-slate-900' : 'bg-white'}>Easy</option>
+                    <option value="treadmill" className={theme === 'dark' ? 'bg-slate-900' : 'bg-white'}>Treadmill</option>
+                    <option value="other" className={theme === 'dark' ? 'bg-slate-900' : 'bg-white'}>Other</option>
                   </select>
                 </div>
               </div>
@@ -354,16 +359,16 @@ const App: React.FC = () => {
 
       {/* Weight Modal */}
       {showWeightInput && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-2xl bg-slate-950/80">
-          <div className="premium-glass rounded-[48px] p-10 w-full max-w-md border border-white/10 shadow-2xl animate-in zoom-in duration-300">
+        <div className={`fixed inset-0 z-[100] flex items-center justify-center p-6 ${modalBgClass}`}>
+          <div className={`premium-glass rounded-[48px] p-10 w-full max-w-md border shadow-2xl animate-in zoom-in duration-300 ${theme === 'dark' ? 'border-white/10' : 'border-transparent'}`}>
             <div className="flex justify-between items-center mb-10">
-              <h2 className="text-2xl font-black tracking-tighter uppercase text-white">Log Mass</h2>
-              <button onClick={() => setShowWeightInput(false)} className="p-3 rounded-2xl bg-white/5 hover:bg-white/10"><X className="w-6 h-6 text-slate-400" /></button>
+              <h2 className={`text-2xl font-black tracking-tighter uppercase ${modalHeaderClass}`}>Log Mass</h2>
+              <button onClick={() => setShowWeightInput(false)} className={`p-3 rounded-2xl ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-200 hover:bg-slate-300'}`}><X className={`w-6 h-6 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`} /></button>
             </div>
             <div className="space-y-8">
               <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4 block">Current Bodyweight (KG)</label>
-                <input type="number" step="0.1" autoFocus value={newWeight} onChange={e => setNewWeight(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-3xl p-8 text-white font-black text-5xl text-center focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="00.0" />
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4 block text-center">Current Bodyweight (KG)</label>
+                <input type="number" step="0.1" autoFocus value={newWeight} onChange={e => setNewWeight(e.target.value)} className={`w-full border rounded-3xl p-8 font-black text-5xl text-center focus:ring-2 focus:ring-indigo-500 outline-none ${inputBgClass} ${inputTextClass}`} placeholder="00.0" />
               </div>
               <button onClick={handleWeightSubmit} className="w-full py-6 bg-rose-600 hover:bg-rose-500 transition-all text-white font-black uppercase text-xs tracking-[0.3em] rounded-3xl shadow-xl shadow-rose-500/20">
                 Update Gradient
