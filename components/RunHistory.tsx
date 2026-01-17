@@ -117,9 +117,17 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ runs, onEditRun, theme =
                       <span className={`text-sm sm:text-base font-black tracking-tight tabular-nums ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}>{run.pace}</span>
                   </div>
                 </div>
-                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center group-hover:bg-indigo-500/20 transition-all duration-500 flex-shrink-0 ${theme === 'dark' ? 'bg-white/5' : 'bg-slate-100'}`}>
+                <button 
+                  type="button"
+                  title="Edit Session"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditRun(run);
+                  }}
+                  className={`relative z-10 w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center group-hover:bg-indigo-500/20 transition-all duration-500 flex-shrink-0 cursor-pointer ${theme === 'dark' ? 'bg-white/5' : 'bg-slate-100'} hover:scale-110 active:scale-95`}
+                >
                   <Edit3 className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500 group-hover:text-indigo-600" />
-                </div>
+                </button>
               </div>
             </div>
           ))

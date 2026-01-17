@@ -24,6 +24,7 @@
         --text-primary: #1F2937;
         --glass-bg: rgba(255, 255, 255, 0.9);
         --glass-border: transparent;
+        color-scheme: light;
       }
 
       .dark-mode {
@@ -32,6 +33,7 @@
         --text-primary: #f1f5f9;
         --glass-bg: rgba(30, 41, 59, 0.5);
         --glass-border: rgba(255, 255, 255, 0.15);
+        color-scheme: dark;
       }
 
       body {
@@ -71,17 +73,29 @@
       }
       
       .dark-mode .premium-glass:hover {
-        /* Reset hover for dark mode */
         background: var(--glass-bg);
       }
       
-      /* Signature Gemini Gradient Text */
       .gemini-text {
         background: linear-gradient(90deg, #1a73e8 0%, #8b5cf6 50%, #d946ef 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
         font-weight: 900;
+      }
+
+      /* Date Picker Overrides */
+      input[type="date"]::-webkit-calendar-picker-indicator {
+        background-color: #6366f1;
+        padding: 5px;
+        cursor: pointer;
+        border-radius: 8px;
+        filter: invert(0);
+      }
+      
+      .dark-mode input[type="date"]::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+        background-color: transparent;
       }
 
       .edge-border {
@@ -127,15 +141,11 @@
         100% { transform: translateY(500px); opacity: 0; }
       }
 
-      /* Scrollbar */
       ::-webkit-scrollbar { width: 6px; }
       ::-webkit-scrollbar-track { background: transparent; }
-      /* Default (Light) Scrollbar */
       ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
-      /* Dark Mode Scrollbar */
       .dark-mode ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); }
 
-      /* Hide number input arrows for a cleaner UI */
       input[type=number]::-webkit-inner-spin-button, 
       input[type=number]::-webkit-outer-spin-button { 
         -webkit-appearance: none; 
