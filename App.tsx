@@ -62,7 +62,6 @@ const App: React.FC = () => {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // FORCE inclusion of 'records' if it's missing from old localStorage
         if (!parsed.includes('records')) {
           const strategyIdx = parsed.indexOf('strategy');
           parsed.splice(strategyIdx !== -1 ? strategyIdx + 1 : 0, 0, 'records');
@@ -379,39 +378,51 @@ const App: React.FC = () => {
 
   return (
     <div className={`min-h-screen p-4 sm:p-8 lg:p-12 max-w-7xl mx-auto space-y-12`}>
-      <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 mb-12 lg:mb-16">
+      <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-10 mb-12 lg:mb-16">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-[14px] lg:rounded-[18px] bg-indigo-500 flex items-center justify-center shadow-xl shadow-indigo-500/20">
-            <Route className="text-white w-6 h-6 lg:w-7 lg:h-7" />
+          <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-[18px] lg:rounded-[22px] bg-indigo-500 flex items-center justify-center shadow-2xl shadow-indigo-500/40">
+            <Route className="text-white w-7 h-7 lg:w-8 lg:h-8" />
           </div>
           <div>
-            <h1 className="text-3xl lg:text-4xl font-black tracking-tighter uppercase italic text-white leading-none">Outrun</h1>
-            <div className="flex items-center gap-2 mt-1">
-              <p className="text-[8px] lg:text-[9px] font-black uppercase tracking-[0.5em] text-slate-500">Neural Sync</p>
-              <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${currentUser ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-slate-700'}`}></div>
-            </div>
+            <h1 className={`text-4xl lg:text-5xl font-black tracking-tighter uppercase italic leading-none ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Outrun</h1>
           </div>
         </div>
         
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full lg:w-auto">
-          <div className="flex items-center gap-2 bg-white/5 p-2 rounded-[24px] border border-white/10 justify-between sm:justify-start">
-            <button onClick={() => setShowSyncPanel(true)} className="p-3 lg:p-4 rounded-[18px] hover:bg-white/10 transition-all group flex items-center gap-2 relative">
-              <Wifi className={`w-5 h-5 transition-transform ${currentUser ? 'text-emerald-400' : 'text-indigo-400 group-hover:scale-110'}`} />
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-6 w-full lg:w-auto">
+          {/* Controls Bar */}
+          <div className={`flex items-center gap-3 p-2 rounded-[28px] border justify-between sm:justify-start ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200 shadow-sm'}`}>
+            <button onClick={() => setShowSyncPanel(true)} className={`p-4 rounded-[20px] transition-all group flex items-center gap-2 relative ${theme === 'dark' ? 'hover:bg-white/10' : 'hover:bg-slate-50'}`}>
+              <Wifi className={`w-6 h-6 transition-transform ${currentUser ? 'text-emerald-400' : 'text-indigo-400 group-hover:scale-110'}`} />
             </button>
-            <div className="w-px h-6 bg-white/10 mx-1 hidden sm:block"></div>
-            <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="p-3 lg:p-4 rounded-[18px] hover:bg-white/10 transition-all">
-              {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-indigo-600" />}
+            <div className={`w-px h-8 mx-1 hidden sm:block ${theme === 'dark' ? 'bg-white/10' : 'bg-slate-200'}`}></div>
+            <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className={`p-4 rounded-[20px] transition-all ${theme === 'dark' ? 'hover:bg-white/10' : 'hover:bg-slate-50'}`}>
+              {theme === 'dark' ? <Sun className="w-6 h-6 text-amber-400" /> : <Moon className="w-6 h-6 text-indigo-600" />}
             </button>
-            <button onClick={() => setIsArchitectMode(!isArchitectMode)} className={`p-3 lg:p-4 rounded-[18px] transition-all ${isArchitectMode ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:bg-white/10'}`}>
-              <LayoutGrid className="w-5 h-5" />
+            <button onClick={() => setIsArchitectMode(!isArchitectMode)} className={`p-4 rounded-[20px] transition-all ${isArchitectMode ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30' : 'text-slate-400 hover:bg-white/10'}`}>
+              <LayoutGrid className="w-6 h-6" />
             </button>
           </div>
-          <div className="flex items-center gap-3">
-            <button onClick={() => setShowWeightInput(true)} className="flex-1 sm:flex-none flex items-center justify-center gap-3 px-6 py-4 rounded-[22px] bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-black uppercase text-[10px] tracking-widest text-slate-300">
-              <Scale className="w-4 h-4" /> <span className="hidden sm:inline">Log</span> Weight Tracker
+
+          {/* HIGH VISIBILITY ACTION BUTTONS */}
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => setShowWeightInput(true)} 
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-4 px-10 py-5 rounded-[28px] font-black uppercase text-[12px] tracking-[0.2em] transition-all duration-300 transform hover:scale-[1.03] active:scale-95 shadow-xl ${
+                theme === 'dark' 
+                  ? 'bg-rose-500/10 text-rose-400 border-2 border-rose-500/30 hover:bg-rose-500/20 shadow-rose-900/10' 
+                  : 'bg-white text-rose-600 border-2 border-rose-500/20 hover:border-rose-500/40 shadow-rose-200/50'
+              }`}
+            >
+              <Scale className="w-5 h-5" /> 
+              <span>Weight Tracker</span>
             </button>
-            <button onClick={() => setShowManualRunInput(true)} className="flex-1 sm:flex-none flex items-center justify-center gap-3 px-8 py-4 rounded-[22px] bg-indigo-600 hover:bg-indigo-500 transition-all text-white font-black uppercase text-[10px] tracking-widest shadow-2xl shadow-indigo-500/20">
-              <Plus className="w-5 h-5" /> <span className="hidden sm:inline">Log</span> Running Logs
+
+            <button 
+              onClick={() => setShowManualRunInput(true)} 
+              className="flex-1 sm:flex-none flex items-center justify-center gap-4 px-12 py-5 rounded-[28px] bg-indigo-600 hover:bg-indigo-500 transition-all duration-300 transform hover:scale-[1.03] active:scale-95 text-white font-black uppercase text-[12px] tracking-[0.2em] shadow-2xl shadow-indigo-500/40 border-2 border-indigo-400/20"
+            >
+              <Plus className="w-6 h-6" /> 
+              <span>Running Logs</span>
             </button>
           </div>
         </div>
