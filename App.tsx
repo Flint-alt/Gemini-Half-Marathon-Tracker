@@ -13,7 +13,7 @@ import { GoalProgress } from './components/GoalProgress';
 import { 
   Upload, Scale, X, Plus, ShieldCheck, 
   LayoutGrid, ChevronUp, ChevronDown,
-  Sun, Moon, Route, Timer, Cloud, Copy, Download, UploadCloud, RefreshCw, Check, QrCode, Wifi, WifiOff, LogIn, LogOut, User, Calendar
+  Sun, Moon, Route, Timer, Cloud, Copy, Download, UploadCloud, RefreshCw, Check, QrCode, Wifi, WifiOff, LogIn, LogOut, User, Calendar, Terminal
 } from 'lucide-react';
 
 const INITIAL_PROFILE: UserProfile = {
@@ -49,10 +49,10 @@ const App: React.FC = () => {
   const [showWeightInput, setShowWeightInput] = useState(false);
   const [showManualRunInput, setShowManualRunInput] = useState(false);
   const [showSyncPanel, setShowSyncPanel] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<'idle' | 'copied' | 'error' | 'synced' | 'connecting'>('idle');
-  const [importKey, setImportKey] = useState('');
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'copied' | 'error' | 'synced' | 'connecting' | 'teleported'>('idle');
   const [editingRunId, setEditingRunId] = useState<string | null>(null);
   const [isArchitectMode, setIsArchitectMode] = useState(false);
+  const [teleportCode, setTeleportCode] = useState('');
 
   const [layoutOrder, setLayoutOrder] = useState<string[]>(() => {
     const saved = localStorage.getItem('neurostride_layout');
@@ -68,7 +68,6 @@ const App: React.FC = () => {
     type: 'long' as 'parkrun' | 'long' | 'easy' | 'treadmill' | 'other'
   });
 
-  // Calculate current week based on TRAINING_PLAN
   const currentWeek = TRAINING_PLAN.find(week => {
     const weekStart = new Date(week.startDate);
     const weekEnd = new Date(weekStart);
@@ -77,38 +76,39 @@ const App: React.FC = () => {
     return now >= weekStart && now < weekEnd;
   }) || TRAINING_PLAN[0];
 
-  // 1. Handle Auth State
+  // Handle URL Sync parameters on mount
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const syncData = params.get('sync');
+    if (syncData) {
+      handleTeleport(syncData);
+      // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!auth.onAuthStateChanged) return;
     return onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
-      if (user) {
-        setSyncStatus('synced');
-      } else {
-        setSyncStatus('idle');
-      }
+      if (user) setSyncStatus('synced');
     });
   }, []);
 
-  // 2. Real-time Subscription to Neural Cloud
   useEffect(() => {
     if (!currentUser) return;
-
     const unsubscribe = subscribeToNeuralCloud(currentUser.uid, (cloudData) => {
       if (cloudData.runs) setRuns(cloudData.runs);
       if (cloudData.weights) setWeights(cloudData.weights);
       if (cloudData.layoutOrder) setLayoutOrder(cloudData.layoutOrder);
     });
-
     return () => unsubscribe();
   }, [currentUser]);
 
-  // 3. Local Fallback & UI Sync
   useEffect(() => {
     localStorage.setItem('neurostride_runs', JSON.stringify(runs));
     localStorage.setItem('neurostride_weights', JSON.stringify(weights));
     localStorage.setItem('neurostride_layout', JSON.stringify(layoutOrder));
-    
-    // Auto-sync to cloud if logged in
     if (currentUser) {
       syncUserData(currentUser.uid, { runs, weights, layoutOrder });
     }
@@ -116,14 +116,35 @@ const App: React.FC = () => {
 
   useEffect(() => {
     localStorage.setItem('neurostride_theme', theme);
-    if (theme === 'dark') {
-      document.body.classList.add('dark-mode');
-    } else {
-      document.body.classList.remove('dark-mode');
-    }
+    if (theme === 'dark') document.body.classList.add('dark-mode');
+    else document.body.classList.remove('dark-mode');
   }, [theme]);
 
+  const handleTeleport = (payload: string) => {
+    try {
+      // Strips the URL if a full link was pasted
+      const actualCode = payload.includes('?sync=') ? payload.split('?sync=')[1] : payload;
+      const decoded = JSON.parse(decodeURIComponent(atob(actualCode)));
+      
+      if (decoded.runs) setRuns(decoded.runs);
+      if (decoded.weights) setWeights(decoded.weights);
+      if (decoded.theme) setTheme(decoded.theme);
+      if (decoded.layoutOrder) setLayoutOrder(decoded.layoutOrder);
+      
+      setSyncStatus('teleported');
+      setTeleportCode('');
+      setTimeout(() => setSyncStatus('idle'), 3000);
+    } catch (e) {
+      console.error("Teleport Failed", e);
+      setSyncStatus('error');
+    }
+  };
+
   const handleLogin = async () => {
+    if (!googleProvider) {
+      alert("Cloud Sync is in simulation mode because Firebase keys are missing in the code. Connect real keys in firebaseService.ts to enable login.");
+      return;
+    }
     setSyncStatus('connecting');
     try {
       await signInWithPopup(auth, googleProvider);
@@ -134,7 +155,8 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
-    signOut(auth);
+    if (signOut) signOut(auth);
+    else setCurrentUser(null);
   };
 
   const getSyncPayload = useCallback(() => {
@@ -142,13 +164,9 @@ const App: React.FC = () => {
     return btoa(encodeURIComponent(JSON.stringify(data)));
   }, [runs, weights, theme, layoutOrder]);
 
-  const generateSyncLink = () => {
-    const payload = getSyncPayload();
-    return `${window.location.origin}${window.location.pathname}?sync=${payload}`;
-  };
-
   const copySyncLink = () => {
-    const link = generateSyncLink();
+    const payload = getSyncPayload();
+    const link = `${window.location.origin}${window.location.pathname}?sync=${payload}`;
     navigator.clipboard.writeText(link);
     setSyncStatus('copied');
     setTimeout(() => setSyncStatus('idle'), 3000);
@@ -169,7 +187,6 @@ const App: React.FC = () => {
     if (!manualRun.distance || !manualRun.duration) return;
     setLoading(true);
     const dist = parseFloat(manualRun.distance);
-    
     const newRunData = {
       distanceKm: dist,
       duration: manualRun.duration,
@@ -196,8 +213,7 @@ const App: React.FC = () => {
     setManualRun({ distance: '', duration: '', date: new Date().toISOString().split('T')[0], type: 'long' });
     
     try {
-      const targetRun = editingRunId ? updatedRuns.find(r => r.id === editingRunId)! : updatedRuns[0];
-      const insight = await getCoachingAdvice(targetRun, updatedRuns, INITIAL_PROFILE);
+      const insight = await getCoachingAdvice(updatedRuns[0], updatedRuns, INITIAL_PROFILE);
       setCoachingInsight(insight);
     } finally { 
       setLoading(false); 
@@ -222,8 +238,6 @@ const App: React.FC = () => {
       date: weightDate,
       weightKg: parseFloat(newWeight)
     };
-    
-    // Insert and sort to keep charts clean
     const updatedWeights = [entry, ...weights].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     setWeights(updatedWeights);
     setNewWeight('');
@@ -276,8 +290,8 @@ const App: React.FC = () => {
     if (!isArchitectMode) return null;
     return (
       <div className="absolute top-4 right-4 z-40 flex flex-col gap-2">
-        <button disabled={index === 0} onClick={() => moveItem(index, 'up')} className="p-2 bg-indigo-500 text-white rounded-lg disabled:opacity-30"><ChevronUp className="w-4 h-4" /></button>
-        <button disabled={index === total - 1} onClick={() => moveItem(index, 'down')} className="p-2 bg-indigo-500 text-white rounded-lg disabled:opacity-30"><ChevronDown className="w-4 h-4" /></button>
+        <button disabled={index === 0} onClick={() => moveItem(index, 'up')} className="p-2 bg-indigo-500 text-white rounded-lg"><ChevronUp className="w-4 h-4" /></button>
+        <button disabled={index === total - 1} onClick={() => moveItem(index, 'down')} className="p-2 bg-indigo-500 text-white rounded-lg"><ChevronDown className="w-4 h-4" /></button>
       </div>
     );
   };
@@ -285,7 +299,7 @@ const App: React.FC = () => {
   const renderMainItem = (id: string, index: number) => {
     const tileClass = `relative ${isArchitectMode ? 'ring-2 ring-indigo-500/40 ring-offset-4 rounded-[42px]' : ''}`;
     const valueTextColor = theme === 'dark' ? 'text-white' : 'text-slate-900';
-    const labelTextColor = theme === 'dark' ? 'text-slate-500' : 'text-slate-500';
+    const labelTextColor = 'text-slate-500';
 
     switch(id) {
       case 'strategy':
@@ -350,7 +364,6 @@ const App: React.FC = () => {
           <div className="flex items-center gap-2 bg-white/5 p-2 rounded-[24px] border border-white/10 justify-between sm:justify-start">
             <button onClick={() => setShowSyncPanel(true)} className="p-3 lg:p-4 rounded-[18px] hover:bg-white/10 transition-all group flex items-center gap-2 relative">
               <Wifi className={`w-5 h-5 transition-transform ${currentUser ? 'text-emerald-400' : 'text-indigo-400 group-hover:scale-110'}`} />
-              <span className="text-[9px] font-black uppercase tracking-widest text-indigo-400 sm:hidden">Cloud Hub</span>
             </button>
             <div className="w-px h-6 bg-white/10 mx-1 hidden sm:block"></div>
             <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="p-3 lg:p-4 rounded-[18px] hover:bg-white/10 transition-all">
@@ -360,12 +373,11 @@ const App: React.FC = () => {
               <LayoutGrid className="w-5 h-5" />
             </button>
           </div>
-
           <div className="flex items-center gap-3">
-            <button onClick={() => { setWeightDate(new Date().toISOString().split('T')[0]); setShowWeightInput(true); }} className="flex-1 sm:flex-none flex items-center justify-center gap-3 px-6 py-4 rounded-[22px] bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-black uppercase text-[10px] tracking-widest text-slate-300">
+            <button onClick={() => setShowWeightInput(true)} className="flex-1 sm:flex-none flex items-center justify-center gap-3 px-6 py-4 rounded-[22px] bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-black uppercase text-[10px] tracking-widest text-slate-300">
               <Scale className="w-4 h-4" /> <span className="hidden sm:inline">Log</span> Weight
             </button>
-            <button onClick={() => { setEditingRunId(null); setShowManualRunInput(true); }} className="flex-1 sm:flex-none flex items-center justify-center gap-3 px-8 py-4 rounded-[22px] bg-indigo-600 hover:bg-indigo-500 transition-all text-white font-black uppercase text-[10px] tracking-widest shadow-2xl shadow-indigo-500/20">
+            <button onClick={() => setShowManualRunInput(true)} className="flex-1 sm:flex-none flex items-center justify-center gap-3 px-8 py-4 rounded-[22px] bg-indigo-600 hover:bg-indigo-500 transition-all text-white font-black uppercase text-[10px] tracking-widest shadow-2xl shadow-indigo-500/20">
               <Plus className="w-5 h-5" /> <span className="hidden sm:inline">Log</span> Session
             </button>
           </div>
@@ -391,7 +403,6 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* Sync Panel Modal with Firebase Integration */}
       {showSyncPanel && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-2xl bg-slate-950/80">
           <div className={`premium-glass rounded-[48px] p-10 w-full max-w-xl border shadow-2xl animate-in zoom-in duration-300 ${theme === 'dark' ? 'border-white/10' : 'border-white/40'}`}>
@@ -403,12 +414,11 @@ const App: React.FC = () => {
               <button onClick={() => setShowSyncPanel(false)} className={`p-3 rounded-2xl ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}`}><X className="w-6 h-6" /></button>
             </div>
             
-            <div className="space-y-8">
+            <div className="space-y-8 max-h-[70vh] overflow-y-auto pr-2 no-scrollbar">
               {!currentUser ? (
                 <div className="p-10 rounded-[40px] bg-indigo-600 text-center text-white">
                   <User className="w-12 h-12 mx-auto mb-6 opacity-40" />
                   <h3 className="text-xl font-black mb-4 uppercase tracking-tighter">Initialize Cloud Sync</h3>
-                  <p className="text-indigo-200 text-xs font-medium mb-8">Connect your Google account for instant real-time synchronization across all your training devices.</p>
                   <button onClick={handleLogin} className="w-full py-5 bg-white text-indigo-600 rounded-[22px] font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 hover:bg-indigo-50 transition-all">
                     <LogIn className="w-4 h-4" /> {syncStatus === 'connecting' ? 'Connecting...' : 'Sign in with Google'}
                   </button>
@@ -428,11 +438,34 @@ const App: React.FC = () => {
                 </div>
               )}
 
+              {/* Manual Teleport Input Section */}
+              <div className={`p-8 rounded-[32px] border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
+                <div className="flex items-center gap-3 mb-6">
+                  <Terminal className="w-5 h-5 text-indigo-500" />
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Teleport Protocol</h4>
+                </div>
+                <textarea 
+                  value={teleportCode}
+                  onChange={(e) => setTeleportCode(e.target.value)}
+                  placeholder="Paste sync code or full teleport link here..."
+                  className={`w-full h-24 p-4 rounded-2xl text-[10px] font-mono border resize-none outline-none focus:ring-2 focus:ring-indigo-500/50 ${theme === 'dark' ? 'bg-slate-950/50 border-white/5 text-slate-300' : 'bg-white border-slate-200 text-slate-800'}`}
+                />
+                <button 
+                  onClick={() => handleTeleport(teleportCode)}
+                  disabled={!teleportCode}
+                  className="w-full mt-4 py-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-30 transition-all text-white font-black uppercase text-[9px] tracking-[0.2em] rounded-2xl"
+                >
+                  {syncStatus === 'teleported' ? 'Handshake Successful' : 'Initiate Handshake'}
+                </button>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="p-8 rounded-[32px] bg-slate-800/20 border border-white/5 text-center">
                    <QrCode className="w-10 h-10 mx-auto mb-4 text-indigo-400" />
-                   <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Device Handshake</h4>
-                   <button onClick={copySyncLink} className="text-indigo-400 font-black uppercase text-[9px] tracking-widest hover:underline">Copy Teleport Link</button>
+                   <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Device Outbound</h4>
+                   <button onClick={copySyncLink} className="text-indigo-400 font-black uppercase text-[9px] tracking-widest hover:underline">
+                    {syncStatus === 'copied' ? 'Link Copied!' : 'Copy Teleport Link'}
+                   </button>
                 </div>
                 <div className="p-8 rounded-[32px] bg-slate-800/20 border border-white/5 text-center">
                    <ShieldCheck className="w-10 h-10 mx-auto mb-4 text-emerald-400" />
@@ -445,33 +478,32 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Manual Run Modal */}
       {showManualRunInput && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-2xl bg-slate-950/80">
           <div className={`premium-glass rounded-[48px] p-10 w-full max-w-xl border shadow-2xl animate-in zoom-in duration-300 ${theme === 'dark' ? 'border-white/10' : 'border-white/40'}`}>
             <div className="flex justify-between items-center mb-10">
               <h2 className={`text-2xl font-black tracking-tighter uppercase ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{editingRunId ? 'Edit' : 'Log'} Session</h2>
-              <button onClick={() => { setShowManualRunInput(false); setEditingRunId(null); }} className={`p-3 rounded-2xl ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}`}><X className={`w-6 h-6 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`} /></button>
+              <button onClick={() => { setShowManualRunInput(false); setEditingRunId(null); }} className={`p-3 rounded-2xl ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}`}><X className="w-6 h-6" /></button>
             </div>
             <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">Distance (KM)</label>
-                  <input type="number" step="0.01" value={manualRun.distance} onChange={e => setManualRun({...manualRun, distance: e.target.value})} className={modalInputClass} placeholder="0.00" />
+                  <input type="number" step="0.01" value={manualRun.distance} onChange={e => setManualRun({...manualRun, distance: e.target.value})} className={modalInputClass} />
                 </div>
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">Duration (HH:MM:SS)</label>
-                  <input type="text" value={manualRun.duration} onChange={e => setManualRun({...manualRun, duration: e.target.value})} className={modalInputClass} placeholder="00:00:00" />
+                  <input type="text" value={manualRun.duration} onChange={e => setManualRun({...manualRun, duration: e.target.value})} className={modalInputClass} />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">Date</label>
-                  <input type="date" value={manualRun.date} onChange={e => setManualRun({...manualRun, date: e.target.value})} className={`${modalInputClass} cursor-pointer`} />
+                  <input type="date" value={manualRun.date} onChange={e => setManualRun({...manualRun, date: e.target.value})} className={modalInputClass} />
                 </div>
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">Type</label>
-                  <select value={manualRun.type} onChange={e => setManualRun({...manualRun, type: e.target.value as any})} className={`${modalInputClass} appearance-none cursor-pointer`}>
+                  <select value={manualRun.type} onChange={e => setManualRun({...manualRun, type: e.target.value as any})} className={modalInputClass}>
                     <option value="long">Long Run</option>
                     <option value="parkrun">Parkrun</option>
                     <option value="easy">Easy</option>
@@ -488,13 +520,12 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Weight Modal */}
       {showWeightInput && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-2xl bg-slate-950/80">
           <div className={`premium-glass rounded-[48px] p-10 w-full max-w-xl border shadow-2xl animate-in zoom-in duration-300 ${theme === 'dark' ? 'border-white/10' : 'border-white/40'}`}>
             <div className="flex justify-between items-center mb-10">
               <h2 className={`text-2xl font-black tracking-tighter uppercase ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Log Mass</h2>
-              <button onClick={() => setShowWeightInput(false)} className={`p-3 rounded-2xl ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}`}><X className={`w-6 h-6 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`} /></button>
+              <button onClick={() => setShowWeightInput(false)} className={`p-3 rounded-2xl ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}`}><X className="w-6 h-6" /></button>
             </div>
             <div className="space-y-8">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">

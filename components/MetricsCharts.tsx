@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { 
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Line, ComposedChart, ReferenceLine
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, Line, ComposedChart, ReferenceLine, Cell, AreaChart, Area
 } from 'recharts';
 import { RunData, WeightEntry } from '../types';
 import { TRAINING_PLAN } from '../data/trainingPlan';
@@ -14,18 +14,24 @@ interface MetricsChartsProps {
 
 const CustomTooltip = ({ active, payload, label, theme }: any) => {
   if (active && payload && payload.length) {
+    // Filter out "Trend" to avoid redundant info in the tooltip
+    const filteredPayload = payload.filter((entry: any) => entry.name !== 'Trend');
+    
     return (
       <div className={`backdrop-blur-xl p-5 rounded-2xl border shadow-2xl ${theme === 'dark' ? 'bg-[#1e293b]/95 border-white/10' : 'bg-white/95 border-slate-200'}`}>
-        <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-4 border-b pb-2 ${theme === 'dark' ? 'text-slate-500 border-white/5' : 'text-slate-400 border-slate-100'}`}>{label}</p>
-        {payload.map((entry: any, index: number) => (
-          <div key={index} className="flex items-center justify-between gap-8 py-1.5">
-            <div className="flex items-center gap-3">
-              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color, boxShadow: `0 0 10px ${entry.color}` }} />
-              <span className={`text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>{entry.name}</span>
+        <p className={`text-[10px] font-black uppercase tracking-[0.4em] mb-4 border-b pb-2 ${theme === 'dark' ? 'text-slate-500 border-white/5' : 'text-slate-400 border-slate-100'}`}>{label}</p>
+        {filteredPayload.map((entry: any, index: number) => {
+          const value = entry.value !== undefined && entry.value !== null ? entry.value : 0;
+          return (
+            <div key={index} className="flex items-center justify-between gap-8 py-1.5">
+              <div className="flex items-center gap-3">
+                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color, boxShadow: `0 0 10px ${entry.color}` }} />
+                <span className={`text-[10px] font-black uppercase tracking-widest ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>{entry.name}</span>
+              </div>
+              <span className={`text-xs font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{value.toFixed(1)} {entry.name === 'Weight' ? 'KG' : 'KM'}</span>
             </div>
-            <span className={`text-xs font-black tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{entry.value.toFixed(1)} {entry.name === 'Weight' ? 'KG' : 'KM'}</span>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   }
@@ -33,22 +39,36 @@ const CustomTooltip = ({ active, payload, label, theme }: any) => {
 };
 
 export const MetricsCharts: React.FC<MetricsChartsProps> = ({ runs, weightHistory, theme = 'dark' }) => {
+  const now = new Date();
+  
   const volumeData = TRAINING_PLAN.map(week => {
     const weekStart = new Date(week.startDate);
+    weekStart.setHours(0, 0, 0, 0); // Normalize to start of day
+    
     const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 7);
+    weekEnd.setDate(weekStart.getDate() + 7); // Exactly 7 days later (start of next week's day 1)
 
+    // Calculate actual volume for this week
     const weeklyActual = runs.reduce((sum, run) => {
       const runDate = new Date(run.date);
+      // Run must be >= start and strictly < start of next week
       if (runDate >= weekStart && runDate < weekEnd) return sum + run.distanceKm;
       return sum;
     }, 0);
 
+    const target = week.plannedLongRunKm + week.plannedParkrunKm;
+    const isCurrent = now >= weekStart && now < weekEnd;
+    const isPast = now >= weekEnd;
+    
+    // Show actual data if week has passed, is current, or has manual entries
+    const hasData = weeklyActual > 0;
+    const shouldShowActual = isPast || isCurrent || hasData;
+
     return {
       weekLabel: `W${week.weekNumber}`,
-      planned: week.plannedLongRunKm + week.plannedParkrunKm,
-      actual: weeklyActual,
-      isCurrent: new Date() >= weekStart && new Date() < weekEnd
+      target: target,
+      actual: shouldShowActual ? weeklyActual : undefined,
+      isCurrent: isCurrent
     };
   });
 
@@ -72,13 +92,13 @@ export const MetricsCharts: React.FC<MetricsChartsProps> = ({ runs, weightHistor
       <div className={`premium-glass p-10 rounded-[40px] ${theme === 'dark' ? 'inner-glow' : ''}`}>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-12">
           <div>
-            <h3 className={`text-[11px] font-black uppercase tracking-[0.4em] mb-2 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`}>Performance Stream</h3>
+            <h3 className={`text-[11px] font-black uppercase tracking-[0.4em] mb-2 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`}>Training Plan</h3>
             <h2 className={`text-2xl font-black tracking-tighter uppercase ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Weekly Volume Delta</h2>
           </div>
           <div className={`flex gap-6 p-3 rounded-2xl border ${theme === 'dark' ? 'bg-slate-900/40 border-white/5' : 'bg-slate-50 border-slate-200 shadow-inner'}`}>
              <div className="flex items-center gap-2">
-                <div className={`w-2.5 h-2.5 rounded-full ${theme === 'dark' ? 'bg-slate-600' : 'bg-indigo-300'}`} />
-                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Protocol</span>
+                <div className={`w-2.5 h-2.5 rounded-full ${theme === 'dark' ? 'bg-slate-700/30' : 'bg-slate-200'}`} />
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Target KM</span>
              </div>
              <div className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]" />
@@ -103,24 +123,39 @@ export const MetricsCharts: React.FC<MetricsChartsProps> = ({ runs, weightHistor
                 tickLine={false} 
                 axisLine={false} 
               />
-              <Tooltip content={<CustomTooltip theme={theme} />} cursor={{ stroke: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', strokeWidth: 2 }} />
-              
-              <Area 
-                type="stepAfter" 
-                dataKey="planned" 
-                stroke={theme === 'dark' ? "rgba(148, 163, 184, 0.3)" : "rgba(129, 140, 248, 0.6)"} 
-                strokeWidth={1}
-                fill={theme === 'dark' ? "rgba(148, 163, 184, 0.15)" : "rgba(129, 140, 248, 0.25)"} 
-                name="Target" 
+              <Tooltip 
+                content={<CustomTooltip theme={theme} />} 
+                cursor={{ fill: theme === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }} 
               />
+              
+              {/* Target KM Backdrop */}
+              <Bar 
+                dataKey="target" 
+                fill={theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'} 
+                radius={[8, 8, 0, 0]} 
+                name="Target KM" 
+                barSize={12}
+              />
+
+              {/* Actual KM Filling vertically */}
+              <Bar 
+                dataKey="actual" 
+                fill="#6366f1" 
+                radius={[8, 8, 0, 0]} 
+                name="Actual" 
+                barSize={12}
+                style={{ transform: 'translateX(-12px)' }} 
+              />
+
               <Line 
                 type="monotone" 
                 dataKey="actual" 
                 stroke="#6366f1" 
-                strokeWidth={4} 
-                dot={{ r: 4, fill: '#6366f1', strokeWidth: 3, stroke: theme === 'dark' ? '#0f172a' : '#fff' }} 
-                activeDot={{ r: 8, strokeWidth: 0, fill: '#6366f1' }}
-                name="Actual"
+                strokeWidth={2} 
+                dot={false}
+                connectNulls={false} 
+                activeDot={{ r: 6, strokeWidth: 0, fill: '#6366f1' }}
+                name="Trend"
               />
 
               {/* Current Week Indicator */}
@@ -133,7 +168,7 @@ export const MetricsCharts: React.FC<MetricsChartsProps> = ({ runs, weightHistor
                 />
               )}
 
-              {/* 10K Milestone Indicator */}
+              {/* Milestone Indicators */}
               {tenKWeek && (
                 <ReferenceLine 
                   x={`W${tenKWeek.weekNumber}`} 
@@ -150,7 +185,6 @@ export const MetricsCharts: React.FC<MetricsChartsProps> = ({ runs, weightHistor
                 />
               )}
 
-              {/* Half Marathon Milestone Indicator */}
               {halfMarathonWeek && (
                 <ReferenceLine 
                   x={`W${halfMarathonWeek.weekNumber}`} 
@@ -171,9 +205,9 @@ export const MetricsCharts: React.FC<MetricsChartsProps> = ({ runs, weightHistor
         </div>
       </div>
 
-      {/* Weight Trend */}
+      {/* Weight Tracker */}
       <div className={`premium-glass p-10 rounded-[40px] ${theme === 'dark' ? 'inner-glow' : ''}`}>
-        <h3 className={`text-[11px] font-black uppercase tracking-[0.4em] mb-10 ${theme === 'dark' ? 'text-rose-400' : 'text-rose-600'}`}>Neural Mass Gradient</h3>
+        <h3 className={`text-[11px] font-black uppercase tracking-[0.4em] mb-10 ${theme === 'dark' ? 'text-rose-400' : 'text-rose-600'}`}>Weight Tracker</h3>
         <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={weightDataFormatted} margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>

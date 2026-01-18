@@ -48,7 +48,7 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ runs, onEditRun, theme =
     <div className={`premium-glass rounded-[40px] p-6 sm:p-10 border ${theme === 'dark' ? 'border-white/5' : 'border-transparent'}`}>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10">
         <div>
-          <h3 className={`text-[11px] font-black uppercase tracking-[0.4em] mb-2 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>Protocol Logs</h3>
+          <h3 className={`text-[11px] font-black uppercase tracking-[0.4em] mb-2 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>Running Logs</h3>
           <h2 className={`text-3xl font-black tracking-tighter uppercase ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Activity</h2>
         </div>
         <div className="flex items-center gap-2 text-slate-500">
