@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { RunData } from '../types';
 import { Calendar, Edit3, Image as ImageIcon, ClipboardList, Timer, Zap, Filter } from 'lucide-react';
@@ -101,7 +102,7 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ runs, onEditRun, theme =
                     </span>
                   </div>
                   <div className="text-[10px] font-black text-slate-500 uppercase tracking-[0.25em] flex items-center gap-2">
-                    <Calendar className="w-3.5 h-3.5" /> {new Date(run.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
+                    <Calendar className="w-3.5 h-3.5" /> {new Date(run.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </div>
                 </div>
               </div>

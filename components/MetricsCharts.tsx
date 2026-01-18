@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { 
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Line, ComposedChart, ReferenceLine
@@ -54,7 +55,7 @@ export const MetricsCharts: React.FC<MetricsChartsProps> = ({ runs, weightHistor
   const weightDataFormatted = [...weightHistory]
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .map(w => ({
-        date: new Date(w.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+        date: new Date(w.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
         weight: w.weightKg
     }));
 

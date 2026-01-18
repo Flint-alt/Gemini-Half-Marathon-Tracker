@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { UserProfile } from '../types';
 import { Flag, Trophy } from 'lucide-react';
@@ -13,6 +14,10 @@ export const GoalProgress: React.FC<GoalProgressProps> = ({ goals, theme = 'dark
     return Math.max(0, Math.ceil(diff / (1000 * 3600 * 24)));
   };
 
+  const formatDateUK = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
   const textPrimary = theme === 'dark' ? 'text-white' : 'text-slate-900';
   const textSecondary = theme === 'dark' ? 'text-slate-500' : 'text-slate-400';
 
@@ -22,7 +27,8 @@ export const GoalProgress: React.FC<GoalProgressProps> = ({ goals, theme = 'dark
         <div className={`w-12 h-12 flex items-center justify-center rounded-[18px] mb-8 ${theme === 'dark' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-amber-50 text-amber-600 border border-amber-100'}`}>
             <Flag className="w-6 h-6" />
         </div>
-        <h3 className={`text-[10px] font-black uppercase tracking-[0.3em] mb-3 ${theme === 'dark' ? 'text-amber-400/80' : 'text-amber-600'}`}>Alpha Milestone</h3>
+        <h3 className={`text-[10px] font-black uppercase tracking-[0.3em] mb-1 ${theme === 'dark' ? 'text-amber-400/80' : 'text-amber-600'}`}>Alpha Milestone</h3>
+        <p className={`text-[10px] font-bold tracking-widest uppercase mb-3 ${textSecondary}`}>{formatDateUK(goals.shortTerm.date)}</p>
         <p className={`text-3xl font-black tracking-tight leading-tight mb-8 ${textPrimary}`}>{goals.shortTerm.name}</p>
         <div className="flex items-end justify-between">
             <div>
@@ -42,7 +48,8 @@ export const GoalProgress: React.FC<GoalProgressProps> = ({ goals, theme = 'dark
             <div className={`w-12 h-12 flex items-center justify-center rounded-[18px] mb-8 ${theme === 'dark' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
                 <Trophy className="w-6 h-6" />
             </div>
-            <h3 className={`text-[10px] font-black uppercase tracking-[0.3em] mb-3 ${theme === 'dark' ? 'text-indigo-400/80' : 'text-blue-600'}`}>Grand Objective</h3>
+            <h3 className={`text-[10px] font-black uppercase tracking-[0.3em] mb-1 ${theme === 'dark' ? 'text-indigo-400/80' : 'text-blue-600'}`}>Grand Objective</h3>
+            <p className={`text-[10px] font-bold tracking-widest uppercase mb-3 ${textSecondary}`}>{formatDateUK(goals.longTerm.date)}</p>
             <p className={`text-3xl font-black tracking-tight leading-tight mb-8 ${textPrimary}`}>{goals.longTerm.name}</p>
             <div className="flex items-end justify-between">
                 <div>
