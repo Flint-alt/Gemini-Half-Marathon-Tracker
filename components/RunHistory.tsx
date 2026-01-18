@@ -76,7 +76,8 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ runs, onEditRun, theme =
         ) : (
           filteredRuns.map((run) => (
             <div 
-              key={run.id} 
+              key={run.id}
+              id={`run-${run.id}`}
               onClick={() => onEditRun(run)}
               className={`group flex flex-col md:flex-row md:items-center justify-between p-6 sm:p-8 rounded-[32px] transition-all duration-500 border cursor-pointer active:scale-[0.99] shadow-sm hover:shadow-xl ${
                 theme === 'dark' 

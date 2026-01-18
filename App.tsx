@@ -10,6 +10,7 @@ import { RunHistory } from './components/RunHistory';
 import { MetricsCharts } from './components/MetricsCharts';
 import { CoachingPanel } from './components/CoachingPanel';
 import { GoalProgress } from './components/GoalProgress';
+import { PersonalRecords } from './components/PersonalRecords';
 import { 
   Upload, Scale, X, Plus, ShieldCheck, 
   LayoutGrid, ChevronUp, ChevronDown,
@@ -54,9 +55,24 @@ const App: React.FC = () => {
   const [isArchitectMode, setIsArchitectMode] = useState(false);
   const [teleportCode, setTeleportCode] = useState('');
 
+  // Self-healing layout logic
   const [layoutOrder, setLayoutOrder] = useState<string[]>(() => {
+    const defaultOrder = ['strategy', 'records', 'charts', 'history'];
     const saved = localStorage.getItem('neurostride_layout');
-    return saved ? JSON.parse(saved) : ['strategy', 'charts', 'history'];
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // FORCE inclusion of 'records' if it's missing from old localStorage
+        if (!parsed.includes('records')) {
+          const strategyIdx = parsed.indexOf('strategy');
+          parsed.splice(strategyIdx !== -1 ? strategyIdx + 1 : 0, 0, 'records');
+        }
+        return parsed;
+      } catch (e) {
+        return defaultOrder;
+      }
+    }
+    return defaultOrder;
   });
 
   const [newWeight, setNewWeight] = useState('');
@@ -76,23 +92,22 @@ const App: React.FC = () => {
     return now >= weekStart && now < weekEnd;
   }) || TRAINING_PLAN[0];
 
-  // Handle URL Sync parameters on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const syncData = params.get('sync');
     if (syncData) {
       handleTeleport(syncData);
-      // Clean URL
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
 
   useEffect(() => {
-    if (!auth.onAuthStateChanged) return;
-    return onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
-      if (user) setSyncStatus('synced');
-    });
+    if (auth && auth.onAuthStateChanged) {
+      return onAuthStateChanged(auth, (user) => {
+        setCurrentUser(user);
+        if (user) setSyncStatus('synced');
+      });
+    }
   }, []);
 
   useEffect(() => {
@@ -122,7 +137,6 @@ const App: React.FC = () => {
 
   const handleTeleport = (payload: string) => {
     try {
-      // Strips the URL if a full link was pasted
       const actualCode = payload.includes('?sync=') ? payload.split('?sync=')[1] : payload;
       const decoded = JSON.parse(decodeURIComponent(atob(actualCode)));
       
@@ -142,7 +156,7 @@ const App: React.FC = () => {
 
   const handleLogin = async () => {
     if (!googleProvider) {
-      alert("Cloud Sync is in simulation mode because Firebase keys are missing in the code. Connect real keys in firebaseService.ts to enable login.");
+      alert("Cloud Sync is in simulation mode because Firebase keys are missing.");
       return;
     }
     setSyncStatus('connecting');
@@ -334,8 +348,27 @@ const App: React.FC = () => {
             </div>
           </div>
         );
-      case 'charts': return <div key={id} className={tileClass}><ArchitectControls index={index} total={layoutOrder.length} /><MetricsCharts runs={runs} weightHistory={weights} theme={theme} /></div>;
-      case 'history': return <div key={id} className={tileClass}><ArchitectControls index={index} total={layoutOrder.length} /><RunHistory runs={runs} onEditRun={handleEditRun} theme={theme} /></div>;
+      case 'records':
+        return (
+          <div key={id} className={tileClass}>
+            <ArchitectControls index={index} total={layoutOrder.length} />
+            <PersonalRecords runs={runs} theme={theme} />
+          </div>
+        );
+      case 'charts': 
+        return (
+          <div key={id} className={tileClass}>
+            <ArchitectControls index={index} total={layoutOrder.length} />
+            <MetricsCharts runs={runs} weightHistory={weights} theme={theme} />
+          </div>
+        );
+      case 'history': 
+        return (
+          <div key={id} className={tileClass}>
+            <ArchitectControls index={index} total={layoutOrder.length} />
+            <RunHistory runs={runs} onEditRun={handleEditRun} theme={theme} />
+          </div>
+        );
       default: return null;
     }
   };
@@ -375,10 +408,10 @@ const App: React.FC = () => {
           </div>
           <div className="flex items-center gap-3">
             <button onClick={() => setShowWeightInput(true)} className="flex-1 sm:flex-none flex items-center justify-center gap-3 px-6 py-4 rounded-[22px] bg-white/5 border border-white/10 hover:bg-white/10 transition-all font-black uppercase text-[10px] tracking-widest text-slate-300">
-              <Scale className="w-4 h-4" /> <span className="hidden sm:inline">Log</span> Weight
+              <Scale className="w-4 h-4" /> <span className="hidden sm:inline">Log</span> Weight Tracker
             </button>
             <button onClick={() => setShowManualRunInput(true)} className="flex-1 sm:flex-none flex items-center justify-center gap-3 px-8 py-4 rounded-[22px] bg-indigo-600 hover:bg-indigo-500 transition-all text-white font-black uppercase text-[10px] tracking-widest shadow-2xl shadow-indigo-500/20">
-              <Plus className="w-5 h-5" /> <span className="hidden sm:inline">Log</span> Session
+              <Plus className="w-5 h-5" /> <span className="hidden sm:inline">Log</span> Running Logs
             </button>
           </div>
         </div>
@@ -409,7 +442,7 @@ const App: React.FC = () => {
              <div className="flex justify-between items-center mb-8">
               <div className="flex items-center gap-4">
                 <Cloud className="w-8 h-8 text-indigo-500" />
-                <h2 className={`text-2xl font-black tracking-tighter uppercase ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Neural Cloud</h2>
+                <h2 className="text-2xl font-black tracking-tighter uppercase text-white">Neural Cloud</h2>
               </div>
               <button onClick={() => setShowSyncPanel(false)} className={`p-3 rounded-2xl ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}`}><X className="w-6 h-6" /></button>
             </div>
@@ -438,7 +471,6 @@ const App: React.FC = () => {
                 </div>
               )}
 
-              {/* Manual Teleport Input Section */}
               <div className={`p-8 rounded-[32px] border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
                 <div className="flex items-center gap-3 mb-6">
                   <Terminal className="w-5 h-5 text-indigo-500" />
@@ -482,7 +514,7 @@ const App: React.FC = () => {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-2xl bg-slate-950/80">
           <div className={`premium-glass rounded-[48px] p-10 w-full max-w-xl border shadow-2xl animate-in zoom-in duration-300 ${theme === 'dark' ? 'border-white/10' : 'border-white/40'}`}>
             <div className="flex justify-between items-center mb-10">
-              <h2 className={`text-2xl font-black tracking-tighter uppercase ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{editingRunId ? 'Edit' : 'Log'} Session</h2>
+              <h2 className="text-2xl font-black tracking-tighter uppercase text-white">{editingRunId ? 'Edit' : 'Log'} Session</h2>
               <button onClick={() => { setShowManualRunInput(false); setEditingRunId(null); }} className={`p-3 rounded-2xl ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}`}><X className="w-6 h-6" /></button>
             </div>
             <div className="space-y-6">
@@ -524,7 +556,7 @@ const App: React.FC = () => {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-2xl bg-slate-950/80">
           <div className={`premium-glass rounded-[48px] p-10 w-full max-w-xl border shadow-2xl animate-in zoom-in duration-300 ${theme === 'dark' ? 'border-white/10' : 'border-white/40'}`}>
             <div className="flex justify-between items-center mb-10">
-              <h2 className={`text-2xl font-black tracking-tighter uppercase ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Log Mass</h2>
+              <h2 className="text-2xl font-black tracking-tighter uppercase text-white">Log Mass</h2>
               <button onClick={() => setShowWeightInput(false)} className={`p-3 rounded-2xl ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}`}><X className="w-6 h-6" /></button>
             </div>
             <div className="space-y-8">
