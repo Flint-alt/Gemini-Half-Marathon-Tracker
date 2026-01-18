@@ -14,7 +14,7 @@ import { PersonalRecords } from './components/PersonalRecords';
 import { 
   Upload, Scale, X, Plus, ShieldCheck, 
   LayoutGrid, ChevronUp, ChevronDown,
-  Sun, Moon, Route, Timer, Cloud, Copy, Download, UploadCloud, RefreshCw, Check, QrCode, Wifi, WifiOff, LogIn, LogOut, User, Calendar, Terminal
+  Sun, Moon, Route, Timer, Cloud, Copy, Download, UploadCloud, RefreshCw, Check, QrCode, Wifi, WifiOff, LogIn, LogOut, User, Calendar, Terminal, Heart
 } from 'lucide-react';
 
 const INITIAL_PROFILE: UserProfile = {
@@ -80,7 +80,8 @@ const App: React.FC = () => {
     distance: '', 
     duration: '', 
     date: new Date().toISOString().split('T')[0],
-    type: 'long' as 'parkrun' | 'long' | 'easy' | 'treadmill' | 'other'
+    type: 'long' as 'parkrun' | 'long' | 'easy' | 'treadmill' | 'other',
+    avgHeartRate: ''
   });
 
   const currentWeek = TRAINING_PLAN.find(week => {
@@ -191,7 +192,8 @@ const App: React.FC = () => {
       distance: run.distanceKm.toString(),
       duration: run.duration,
       date: run.date,
-      type: run.type
+      type: run.type,
+      avgHeartRate: run.avgHeartRate?.toString() || ''
     });
     setShowManualRunInput(true);
   };
@@ -205,7 +207,8 @@ const App: React.FC = () => {
       duration: manualRun.duration,
       pace: calculatePace(dist, manualRun.duration),
       date: manualRun.date,
-      type: manualRun.type
+      type: manualRun.type,
+      avgHeartRate: manualRun.avgHeartRate ? parseInt(manualRun.avgHeartRate) : undefined
     };
 
     let updatedRuns: RunData[];
@@ -223,7 +226,7 @@ const App: React.FC = () => {
     setRuns(updatedRuns);
     setShowManualRunInput(false);
     setEditingRunId(null);
-    setManualRun({ distance: '', duration: '', date: new Date().toISOString().split('T')[0], type: 'long' });
+    setManualRun({ distance: '', duration: '', date: new Date().toISOString().split('T')[0], type: 'long', avgHeartRate: '' });
     
     try {
       const insight = await getCoachingAdvice(updatedRuns[0], updatedRuns, INITIAL_PROFILE);
@@ -274,6 +277,7 @@ const App: React.FC = () => {
           distanceKm: extracted.distanceKm || 0,
           duration: extracted.duration || "00:00:00",
           pace: extracted.pace || "0:00",
+          avgHeartRate: extracted.avgHeartRate,
           source: 'upload',
           type: (extracted.distanceKm || 0) < 6 ? 'parkrun' : 'long'
         };
@@ -376,6 +380,8 @@ const App: React.FC = () => {
     ? "w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-white font-black text-xl focus:ring-2 focus:ring-indigo-500 outline-none placeholder:text-slate-500" 
     : "w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 text-slate-900 font-black text-xl focus:ring-2 focus:ring-indigo-500 outline-none placeholder:text-slate-400";
 
+  const modalHeaderClass = `text-3xl font-black tracking-tighter uppercase mb-2 text-center drop-shadow-sm ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`;
+
   return (
     <div className={`min-h-screen p-4 sm:p-8 lg:p-12 max-w-7xl mx-auto space-y-12`}>
       <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-10 mb-12 lg:mb-16">
@@ -388,7 +394,7 @@ const App: React.FC = () => {
           </div>
         </div>
         
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-6 w-full lg:w-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-6 w-full lg:auto">
           {/* Controls Bar */}
           <div className={`flex items-center gap-3 p-2 rounded-[28px] border justify-between sm:justify-start ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200 shadow-sm'}`}>
             <button onClick={() => setShowSyncPanel(true)} className={`p-4 rounded-[20px] transition-all group flex items-center gap-2 relative ${theme === 'dark' ? 'hover:bg-white/10' : 'hover:bg-slate-50'}`}>
@@ -525,10 +531,13 @@ const App: React.FC = () => {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-2xl bg-slate-950/80">
           <div className={`premium-glass rounded-[48px] p-10 w-full max-w-xl border shadow-2xl animate-in zoom-in duration-300 ${theme === 'dark' ? 'border-white/10' : 'border-white/40'}`}>
             <div className="flex justify-between items-center mb-10">
-              <h2 className="text-2xl font-black tracking-tighter uppercase text-white">{editingRunId ? 'Edit' : 'Log'} Session</h2>
-              <button onClick={() => { setShowManualRunInput(false); setEditingRunId(null); }} className={`p-3 rounded-2xl ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}`}><X className="w-6 h-6" /></button>
+              <div className="flex-1">
+                <h2 className={modalHeaderClass}>{editingRunId ? 'Edit' : 'Log'} Session</h2>
+                <div className="w-12 h-1 bg-indigo-500 mx-auto rounded-full"></div>
+              </div>
+              <button onClick={() => { setShowManualRunInput(false); setEditingRunId(null); }} className={`p-3 rounded-2xl absolute top-8 right-8 ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}`}><X className="w-6 h-6" /></button>
             </div>
-            <div className="space-y-6">
+            <div className="space-y-6 max-h-[70vh] overflow-y-auto no-scrollbar pr-2">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">Distance (KM)</label>
@@ -539,22 +548,32 @@ const App: React.FC = () => {
                   <input type="text" value={manualRun.duration} onChange={e => setManualRun({...manualRun, duration: e.target.value})} className={modalInputClass} />
                 </div>
               </div>
+              
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">Avg Heart Rate (BPM)</label>
+                  <div className="relative">
+                    <input type="number" value={manualRun.avgHeartRate} onChange={e => setManualRun({...manualRun, avgHeartRate: e.target.value})} className={`${modalInputClass} pr-14`} placeholder="Optional" />
+                    <Heart className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-rose-500/50" />
+                  </div>
+                </div>
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">Date</label>
                   <input type="date" value={manualRun.date} onChange={e => setManualRun({...manualRun, date: e.target.value})} className={modalInputClass} />
                 </div>
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">Type</label>
-                  <select value={manualRun.type} onChange={e => setManualRun({...manualRun, type: e.target.value as any})} className={modalInputClass}>
-                    <option value="long">Long Run</option>
-                    <option value="parkrun">Parkrun</option>
-                    <option value="easy">Easy</option>
-                    <option value="treadmill">Treadmill</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
               </div>
+
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">Session Profile</label>
+                <select value={manualRun.type} onChange={e => setManualRun({...manualRun, type: e.target.value as any})} className={modalInputClass}>
+                  <option value="long">Long Run</option>
+                  <option value="parkrun">Parkrun</option>
+                  <option value="easy">Easy</option>
+                  <option value="treadmill">Treadmill</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
               <button onClick={handleManualRunSubmit} disabled={loading} className="w-full py-6 bg-indigo-600 hover:bg-indigo-500 transition-all text-white font-black uppercase text-xs tracking-[0.3em] rounded-3xl mt-6 shadow-xl shadow-indigo-500/20">
                 {loading ? 'Processing...' : editingRunId ? 'Update Session' : 'Commit to Log'}
               </button>
@@ -567,8 +586,11 @@ const App: React.FC = () => {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-2xl bg-slate-950/80">
           <div className={`premium-glass rounded-[48px] p-10 w-full max-w-xl border shadow-2xl animate-in zoom-in duration-300 ${theme === 'dark' ? 'border-white/10' : 'border-white/40'}`}>
             <div className="flex justify-between items-center mb-10">
-              <h2 className="text-2xl font-black tracking-tighter uppercase text-white">Log Mass</h2>
-              <button onClick={() => setShowWeightInput(false)} className={`p-3 rounded-2xl ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}`}><X className="w-6 h-6" /></button>
+              <div className="flex-1">
+                <h2 className={modalHeaderClass}>Log Mass</h2>
+                <div className="w-12 h-1 bg-rose-500 mx-auto rounded-full"></div>
+              </div>
+              <button onClick={() => setShowWeightInput(false)} className={`p-3 rounded-2xl absolute top-8 right-8 ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}`}><X className="w-6 h-6" /></button>
             </div>
             <div className="space-y-8">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">

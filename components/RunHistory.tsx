@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { RunData } from '../types';
-import { Calendar, Edit3, Image as ImageIcon, ClipboardList, Timer, Zap, Filter } from 'lucide-react';
+import { Calendar, Edit3, Image as ImageIcon, ClipboardList, Timer, Zap, Filter, Heart } from 'lucide-react';
 
 interface RunHistoryProps {
   runs: RunData[];
@@ -108,16 +108,22 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ runs, onEditRun, theme =
                 </div>
               </div>
               
-              <div className="flex items-center justify-between md:justify-end gap-6 sm:gap-10 md:gap-16">
-                <div className="flex gap-8 sm:gap-10 md:gap-14">
-                  <div className="flex flex-col">
+              <div className="flex items-center justify-between md:justify-end gap-6 sm:gap-10 md:gap-14">
+                <div className="flex gap-6 sm:gap-8 md:gap-10">
+                  <div className="flex flex-col min-w-[60px]">
                       <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><Timer className="w-3.5 h-3.5"/> Time</span>
                       <span className={`text-sm sm:text-base font-black tracking-tight tabular-nums ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}>{run.duration}</span>
                   </div>
-                  <div className="flex flex-col">
+                  <div className="flex flex-col min-w-[60px]">
                       <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><Zap className="w-3.5 h-3.5"/> Pace</span>
                       <span className={`text-sm sm:text-base font-black tracking-tight tabular-nums ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}>{run.pace}</span>
                   </div>
+                  {run.avgHeartRate && (
+                    <div className="flex flex-col min-w-[60px]">
+                        <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><Heart className="w-3.5 h-3.5 text-rose-500"/> BPM</span>
+                        <span className={`text-sm sm:text-base font-black tracking-tight tabular-nums ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}>{run.avgHeartRate}</span>
+                    </div>
+                  )}
                 </div>
                 <button 
                   type="button"
