@@ -11,6 +11,7 @@ import { MetricsCharts } from './components/MetricsCharts';
 import { CoachingPanel } from './components/CoachingPanel';
 import { GoalProgress } from './components/GoalProgress';
 import { PersonalRecords } from './components/PersonalRecords';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import {
   Upload, Scale, X, Plus, ShieldCheck,
   LayoutGrid, ChevronUp, ChevronDown,
@@ -709,4 +710,8 @@ const App: React.FC = () => {
 };
 
 const root = createRoot(document.getElementById('root')!);
-root.render(<App />);
+root.render(
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>
+);
