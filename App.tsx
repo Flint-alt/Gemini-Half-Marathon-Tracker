@@ -5,7 +5,7 @@ import { RunData, WeightEntry, UserProfile, CoachingInsight } from './types';
 import { TRAINING_PLAN } from './data/trainingPlan';
 import { analyzeRunScreenshot, getCoachingAdvice } from './services/geminiService';
 import { auth, googleProvider, subscribeToNeuralCloud, syncUserData } from './services/firebaseService';
-import { signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { signInWithPopup, signOut, onAuthStateChanged, User } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { RunHistory } from './components/RunHistory';
 import { MetricsCharts } from './components/MetricsCharts';
 import { CoachingPanel } from './components/CoachingPanel';
@@ -39,7 +39,7 @@ const INITIAL_PROFILE: UserProfile = {
 };
 
 const App: React.FC = () => {
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [runs, setRuns] = useState<RunData[]>(() => {
     const saved = localStorage.getItem('neurostride_runs');
     return saved ? JSON.parse(saved) : [];

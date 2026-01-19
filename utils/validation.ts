@@ -6,7 +6,7 @@
 export interface ValidationResult {
   isValid: boolean;
   error?: string;
-  value?: any;
+  value?: number | string | undefined;
 }
 
 /**

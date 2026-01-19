@@ -1,16 +1,24 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { 
-  getFirestore, 
-  doc, 
-  onSnapshot, 
-  setDoc, 
-  serverTimestamp 
+import {
+  getFirestore,
+  doc,
+  onSnapshot,
+  setDoc,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { 
-  getAuth, 
+import {
+  getAuth,
   GoogleAuthProvider
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { RunData, WeightEntry } from "../types";
+
+interface UserData {
+  runs?: RunData[];
+  weights?: WeightEntry[];
+  layoutOrder?: string[];
+  [key: string]: unknown; // Allow additional properties from Firestore
+}
 
 // NOTE: These are placeholders. To enable REAL sync, replace with your Firebase Console keys.
 const firebaseConfig = {
@@ -44,7 +52,7 @@ if (isConfigured) {
 
 export { auth, googleProvider };
 
-export const syncUserData = async (uid: string, data: any) => {
+export const syncUserData = async (uid: string, data: Partial<UserData>) => {
   if (!isConfigured || !db) return;
   try {
     const userDoc = doc(db, "users", uid);
@@ -57,11 +65,11 @@ export const syncUserData = async (uid: string, data: any) => {
   }
 };
 
-export const subscribeToNeuralCloud = (uid: string, callback: (data: any) => void) => {
+export const subscribeToNeuralCloud = (uid: string, callback: (data: UserData) => void) => {
   if (!isConfigured || !db) return () => {};
-  return onSnapshot(doc(db, "users", uid), (doc) => {
-    if (doc.exists()) {
-      callback(doc.data());
+  return onSnapshot(doc(db, "users", uid), (snapshot) => {
+    if (snapshot.exists()) {
+      callback(snapshot.data() as UserData);
     }
   });
 };
