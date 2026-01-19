@@ -11,11 +11,19 @@ import { MetricsCharts } from './components/MetricsCharts';
 import { CoachingPanel } from './components/CoachingPanel';
 import { GoalProgress } from './components/GoalProgress';
 import { PersonalRecords } from './components/PersonalRecords';
-import { 
-  Upload, Scale, X, Plus, ShieldCheck, 
+import {
+  Upload, Scale, X, Plus, ShieldCheck,
   LayoutGrid, ChevronUp, ChevronDown,
   Sun, Moon, Route, Timer, Cloud, Copy, Download, UploadCloud, RefreshCw, Check, QrCode, Wifi, WifiOff, LogIn, LogOut, User, Calendar, Terminal, Heart
 } from 'lucide-react';
+import {
+  validateDistance,
+  validateDuration,
+  validateHeartRate,
+  validateWeight,
+  validateDate,
+  calculatePaceSafe
+} from './utils/validation';
 
 const INITIAL_PROFILE: UserProfile = {
   name: "Athlete",
@@ -76,13 +84,14 @@ const App: React.FC = () => {
 
   const [newWeight, setNewWeight] = useState('');
   const [weightDate, setWeightDate] = useState(new Date().toISOString().split('T')[0]);
-  const [manualRun, setManualRun] = useState({ 
-    distance: '', 
-    duration: '', 
+  const [manualRun, setManualRun] = useState({
+    distance: '',
+    duration: '',
     date: new Date().toISOString().split('T')[0],
     type: 'long' as 'parkrun' | 'long' | 'easy' | 'treadmill' | 'other',
     avgHeartRate: ''
   });
+  const [validationError, setValidationError] = useState<string>('');
 
   const currentWeek = TRAINING_PLAN.find(week => {
     const weekStart = new Date(week.startDate);
@@ -199,16 +208,52 @@ const App: React.FC = () => {
   };
 
   const handleManualRunSubmit = async () => {
-    if (!manualRun.distance || !manualRun.duration) return;
+    // Clear previous errors
+    setValidationError('');
+
+    // Validate all inputs
+    const distanceValidation = validateDistance(manualRun.distance);
+    if (!distanceValidation.isValid) {
+      setValidationError(distanceValidation.error || 'Invalid distance');
+      return;
+    }
+
+    const durationValidation = validateDuration(manualRun.duration);
+    if (!durationValidation.isValid) {
+      setValidationError(durationValidation.error || 'Invalid duration');
+      return;
+    }
+
+    const heartRateValidation = validateHeartRate(manualRun.avgHeartRate);
+    if (!heartRateValidation.isValid) {
+      setValidationError(heartRateValidation.error || 'Invalid heart rate');
+      return;
+    }
+
+    const dateValidation = validateDate(manualRun.date);
+    if (!dateValidation.isValid) {
+      setValidationError(dateValidation.error || 'Invalid date');
+      return;
+    }
+
     setLoading(true);
-    const dist = parseFloat(manualRun.distance);
+
+    const dist = distanceValidation.value!;
+    const { pace, error: paceError } = calculatePaceSafe(dist, manualRun.duration);
+
+    if (paceError) {
+      setValidationError(paceError);
+      setLoading(false);
+      return;
+    }
+
     const newRunData = {
       distanceKm: dist,
       duration: manualRun.duration,
-      pace: calculatePace(dist, manualRun.duration),
+      pace,
       date: manualRun.date,
       type: manualRun.type,
-      avgHeartRate: manualRun.avgHeartRate ? parseInt(manualRun.avgHeartRate) : undefined
+      avgHeartRate: heartRateValidation.value
     };
 
     let updatedRuns: RunData[];
@@ -227,32 +272,37 @@ const App: React.FC = () => {
     setShowManualRunInput(false);
     setEditingRunId(null);
     setManualRun({ distance: '', duration: '', date: new Date().toISOString().split('T')[0], type: 'long', avgHeartRate: '' });
-    
+
     try {
       const insight = await getCoachingAdvice(updatedRuns[0], updatedRuns, INITIAL_PROFILE);
       setCoachingInsight(insight);
-    } finally { 
-      setLoading(false); 
+    } finally {
+      setLoading(false);
     }
   };
 
-  const calculatePace = (dist: number, dur: string) => {
-    const parts = dur.split(':').map(Number);
-    let seconds = 0;
-    if (parts.length === 3) seconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
-    else if (parts.length === 2) seconds = parts[0] * 60 + parts[1];
-    else seconds = parts[0] || 0;
-    if (dist === 0 || seconds === 0) return "0:00";
-    const paceSec = seconds / dist;
-    return `${Math.floor(paceSec / 60)}:${Math.floor(paceSec % 60).toString().padStart(2, '0')}`;
-  };
-
   const handleWeightSubmit = () => {
-    if (!newWeight) return;
+    // Clear previous errors
+    setValidationError('');
+
+    // Validate weight input
+    const weightValidation = validateWeight(newWeight);
+    if (!weightValidation.isValid) {
+      setValidationError(weightValidation.error || 'Invalid weight');
+      return;
+    }
+
+    // Validate date
+    const dateValidation = validateDate(weightDate);
+    if (!dateValidation.isValid) {
+      setValidationError(dateValidation.error || 'Invalid date');
+      return;
+    }
+
     const entry: WeightEntry = {
       id: Date.now().toString(),
       date: weightDate,
-      weightKg: parseFloat(newWeight)
+      weightKg: weightValidation.value!
     };
     const updatedWeights = [entry, ...weights].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     setWeights(updatedWeights);
@@ -271,25 +321,57 @@ const App: React.FC = () => {
       try {
         const base64Data = (reader.result as string).split(',')[1];
         const extracted = await analyzeRunScreenshot(base64Data);
+
+        // Validate extracted data
+        const distanceKm = extracted.distanceKm || 0;
+        const duration = extracted.duration || "00:00:00";
+
+        // Basic validation - ensure we have reasonable data
+        if (distanceKm <= 0 || distanceKm > 200) {
+          throw new Error('Extracted distance is invalid. Please enter run data manually.');
+        }
+
+        // Validate duration format
+        const durationValidation = validateDuration(duration);
+        if (!durationValidation.isValid) {
+          throw new Error('Extracted duration is invalid. Please enter run data manually.');
+        }
+
+        // Calculate pace safely
+        const { pace, error: paceError } = calculatePaceSafe(distanceKm, duration);
+        if (paceError) {
+          throw new Error('Could not calculate pace. Please enter run data manually.');
+        }
+
+        // Validate heart rate if present
+        if (extracted.avgHeartRate) {
+          const hrValidation = validateHeartRate(extracted.avgHeartRate.toString());
+          if (!hrValidation.isValid) {
+            // Don't fail, just omit invalid heart rate
+            extracted.avgHeartRate = undefined;
+          }
+        }
+
         const newRun: RunData = {
           id: Date.now().toString(),
           date: extracted.date || new Date().toISOString().split('T')[0],
-          distanceKm: extracted.distanceKm || 0,
-          duration: extracted.duration || "00:00:00",
-          pace: extracted.pace || "0:00",
+          distanceKm,
+          duration,
+          pace,
           avgHeartRate: extracted.avgHeartRate,
           source: 'upload',
-          type: (extracted.distanceKm || 0) < 6 ? 'parkrun' : 'long'
+          type: distanceKm < 6 ? 'parkrun' : 'long'
         };
         const updatedRuns = [newRun, ...runs];
         setRuns(updatedRuns);
         const insight = await getCoachingAdvice(newRun, updatedRuns, INITIAL_PROFILE);
         setCoachingInsight(insight);
-      } catch (err) { 
-        console.error(err); 
-      } finally { 
-        setIsUploading(false); 
-        setLoading(false); 
+      } catch (err) {
+        console.error(err);
+        setValidationError(err instanceof Error ? err.message : 'Failed to extract run data from image');
+      } finally {
+        setIsUploading(false);
+        setLoading(false);
       }
     };
     reader.readAsDataURL(file);
@@ -411,23 +493,23 @@ const App: React.FC = () => {
 
           {/* HIGH VISIBILITY ACTION BUTTONS */}
           <div className="flex items-center gap-4">
-            <button 
-              onClick={() => setShowWeightInput(true)} 
+            <button
+              onClick={() => { setShowWeightInput(true); setValidationError(''); }}
               className={`flex-1 sm:flex-none flex items-center justify-center gap-4 px-10 py-5 rounded-[28px] font-black uppercase text-[12px] tracking-[0.2em] transition-all duration-300 transform hover:scale-[1.03] active:scale-95 shadow-xl ${
-                theme === 'dark' 
-                  ? 'bg-rose-500/10 text-rose-400 border-2 border-rose-500/30 hover:bg-rose-500/20 shadow-rose-900/10' 
+                theme === 'dark'
+                  ? 'bg-rose-500/10 text-rose-400 border-2 border-rose-500/30 hover:bg-rose-500/20 shadow-rose-900/10'
                   : 'bg-white text-rose-600 border-2 border-rose-500/20 hover:border-rose-500/40 shadow-rose-200/50'
               }`}
             >
-              <Scale className="w-5 h-5" /> 
+              <Scale className="w-5 h-5" />
               <span>Weight Tracker</span>
             </button>
 
-            <button 
-              onClick={() => setShowManualRunInput(true)} 
+            <button
+              onClick={() => { setShowManualRunInput(true); setValidationError(''); }}
               className="flex-1 sm:flex-none flex items-center justify-center gap-4 px-12 py-5 rounded-[28px] bg-indigo-600 hover:bg-indigo-500 transition-all duration-300 transform hover:scale-[1.03] active:scale-95 text-white font-black uppercase text-[12px] tracking-[0.2em] shadow-2xl shadow-indigo-500/40 border-2 border-indigo-400/20"
             >
-              <Plus className="w-6 h-6" /> 
+              <Plus className="w-6 h-6" />
               <span>Running Logs</span>
             </button>
           </div>
@@ -535,7 +617,7 @@ const App: React.FC = () => {
                 <h2 className={modalHeaderClass}>{editingRunId ? 'Edit' : 'Log'} Session</h2>
                 <div className="w-12 h-1 bg-indigo-500 mx-auto rounded-full"></div>
               </div>
-              <button onClick={() => { setShowManualRunInput(false); setEditingRunId(null); }} className={`p-3 rounded-2xl absolute top-8 right-8 ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}`}><X className="w-6 h-6" /></button>
+              <button onClick={() => { setShowManualRunInput(false); setEditingRunId(null); setValidationError(''); }} className={`p-3 rounded-2xl absolute top-8 right-8 ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}`}><X className="w-6 h-6" /></button>
             </div>
             <div className="space-y-6 max-h-[70vh] overflow-y-auto no-scrollbar pr-2">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -574,6 +656,12 @@ const App: React.FC = () => {
                 </select>
               </div>
 
+              {validationError && (
+                <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20">
+                  <p className="text-rose-500 text-sm font-bold text-center">{validationError}</p>
+                </div>
+              )}
+
               <button onClick={handleManualRunSubmit} disabled={loading} className="w-full py-6 bg-indigo-600 hover:bg-indigo-500 transition-all text-white font-black uppercase text-xs tracking-[0.3em] rounded-3xl mt-6 shadow-xl shadow-indigo-500/20">
                 {loading ? 'Processing...' : editingRunId ? 'Update Session' : 'Commit to Log'}
               </button>
@@ -590,7 +678,7 @@ const App: React.FC = () => {
                 <h2 className={modalHeaderClass}>Log Mass</h2>
                 <div className="w-12 h-1 bg-rose-500 mx-auto rounded-full"></div>
               </div>
-              <button onClick={() => setShowWeightInput(false)} className={`p-3 rounded-2xl absolute top-8 right-8 ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}`}><X className="w-6 h-6" /></button>
+              <button onClick={() => { setShowWeightInput(false); setValidationError(''); }} className={`p-3 rounded-2xl absolute top-8 right-8 ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}`}><X className="w-6 h-6" /></button>
             </div>
             <div className="space-y-8">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
@@ -603,6 +691,12 @@ const App: React.FC = () => {
                   <input type="date" value={weightDate} onChange={e => setWeightDate(e.target.value)} className={`${modalInputClass} h-32 flex items-center justify-center text-center cursor-pointer`} />
                 </div>
               </div>
+              {validationError && (
+                <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20">
+                  <p className="text-rose-500 text-sm font-bold text-center">{validationError}</p>
+                </div>
+              )}
+
               <button onClick={handleWeightSubmit} className="w-full py-6 bg-rose-600 hover:bg-rose-500 transition-all text-white font-black uppercase text-xs tracking-[0.3em] rounded-3xl shadow-xl shadow-rose-500/20">
                 Update Gradient
               </button>
