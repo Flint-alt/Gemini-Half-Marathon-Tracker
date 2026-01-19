@@ -12,6 +12,7 @@ import { CoachingPanel } from './components/CoachingPanel';
 import { GoalProgress } from './components/GoalProgress';
 import { PersonalRecords } from './components/PersonalRecords';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { ToastProvider, useToast } from './components/ToastContext';
 import {
   Upload, Scale, X, Plus, ShieldCheck,
   LayoutGrid, ChevronUp, ChevronDown,
@@ -39,6 +40,7 @@ const INITIAL_PROFILE: UserProfile = {
 };
 
 const App: React.FC = () => {
+  const { showToast } = useToast();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [runs, setRuns] = useState<RunData[]>(() => {
     const saved = localStorage.getItem('neurostride_runs');
@@ -149,38 +151,47 @@ const App: React.FC = () => {
     try {
       const actualCode = payload.includes('?sync=') ? payload.split('?sync=')[1] : payload;
       const decoded = JSON.parse(decodeURIComponent(atob(actualCode)));
-      
+
       if (decoded.runs) setRuns(decoded.runs);
       if (decoded.weights) setWeights(decoded.weights);
       if (decoded.theme) setTheme(decoded.theme);
       if (decoded.layoutOrder) setLayoutOrder(decoded.layoutOrder);
-      
+
       setSyncStatus('teleported');
       setTeleportCode('');
       setTimeout(() => setSyncStatus('idle'), 3000);
+
+      // Show success toast
+      showToast('Data teleported successfully!', 'success');
     } catch (e) {
       console.error("Teleport Failed", e);
       setSyncStatus('error');
+      showToast('Teleport failed. Invalid sync code.', 'error');
     }
   };
 
   const handleLogin = async () => {
     if (!googleProvider) {
-      alert("Cloud Sync is in simulation mode because Firebase keys are missing.");
+      const msg = "Cloud Sync is in simulation mode because Firebase keys are missing.";
+      alert(msg);
+      showToast(msg, 'info');
       return;
     }
     setSyncStatus('connecting');
     try {
       await signInWithPopup(auth, googleProvider);
+      showToast('Successfully connected to Cloud Sync!', 'success');
     } catch (err) {
       console.error(err);
       setSyncStatus('error');
+      showToast('Failed to connect to Cloud Sync', 'error');
     }
   };
 
   const handleLogout = () => {
     if (signOut) signOut(auth);
     else setCurrentUser(null);
+    showToast('Disconnected from Cloud Sync', 'info');
   };
 
   const getSyncPayload = useCallback(() => {
@@ -194,6 +205,9 @@ const App: React.FC = () => {
     navigator.clipboard.writeText(link);
     setSyncStatus('copied');
     setTimeout(() => setSyncStatus('idle'), 3000);
+
+    // Show success toast
+    showToast('Teleport link copied to clipboard!', 'success');
   };
 
   const handleEditRun = (run: RunData) => {
@@ -215,25 +229,33 @@ const App: React.FC = () => {
     // Validate all inputs
     const distanceValidation = validateDistance(manualRun.distance);
     if (!distanceValidation.isValid) {
-      setValidationError(distanceValidation.error || 'Invalid distance');
+      const error = distanceValidation.error || 'Invalid distance';
+      setValidationError(error);
+      showToast(error, 'error');
       return;
     }
 
     const durationValidation = validateDuration(manualRun.duration);
     if (!durationValidation.isValid) {
-      setValidationError(durationValidation.error || 'Invalid duration');
+      const error = durationValidation.error || 'Invalid duration';
+      setValidationError(error);
+      showToast(error, 'error');
       return;
     }
 
     const heartRateValidation = validateHeartRate(manualRun.avgHeartRate);
     if (!heartRateValidation.isValid) {
-      setValidationError(heartRateValidation.error || 'Invalid heart rate');
+      const error = heartRateValidation.error || 'Invalid heart rate';
+      setValidationError(error);
+      showToast(error, 'error');
       return;
     }
 
     const dateValidation = validateDate(manualRun.date);
     if (!dateValidation.isValid) {
-      setValidationError(dateValidation.error || 'Invalid date');
+      const error = dateValidation.error || 'Invalid date';
+      setValidationError(error);
+      showToast(error, 'error');
       return;
     }
 
@@ -274,6 +296,9 @@ const App: React.FC = () => {
     setEditingRunId(null);
     setManualRun({ distance: '', duration: '', date: new Date().toISOString().split('T')[0], type: 'long', avgHeartRate: '' });
 
+    // Show success toast
+    showToast(editingRunId ? 'Run updated successfully!' : 'Run logged successfully!', 'success');
+
     try {
       const insight = await getCoachingAdvice(updatedRuns[0], updatedRuns, INITIAL_PROFILE);
       setCoachingInsight(insight);
@@ -289,14 +314,18 @@ const App: React.FC = () => {
     // Validate weight input
     const weightValidation = validateWeight(newWeight);
     if (!weightValidation.isValid) {
-      setValidationError(weightValidation.error || 'Invalid weight');
+      const error = weightValidation.error || 'Invalid weight';
+      setValidationError(error);
+      showToast(error, 'error');
       return;
     }
 
     // Validate date
     const dateValidation = validateDate(weightDate);
     if (!dateValidation.isValid) {
-      setValidationError(dateValidation.error || 'Invalid date');
+      const error = dateValidation.error || 'Invalid date';
+      setValidationError(error);
+      showToast(error, 'error');
       return;
     }
 
@@ -310,6 +339,9 @@ const App: React.FC = () => {
     setNewWeight('');
     setWeightDate(new Date().toISOString().split('T')[0]);
     setShowWeightInput(false);
+
+    // Show success toast
+    showToast(`Weight logged: ${weightValidation.value}kg`, 'success');
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -367,9 +399,14 @@ const App: React.FC = () => {
         setRuns(updatedRuns);
         const insight = await getCoachingAdvice(newRun, updatedRuns, INITIAL_PROFILE);
         setCoachingInsight(insight);
+
+        // Show success toast
+        showToast('Run extracted from screenshot!', 'success');
       } catch (err) {
         console.error(err);
-        setValidationError(err instanceof Error ? err.message : 'Failed to extract run data from image');
+        const errorMsg = err instanceof Error ? err.message : 'Failed to extract run data from image';
+        setValidationError(errorMsg);
+        showToast(errorMsg, 'error');
       } finally {
         setIsUploading(false);
         setLoading(false);
@@ -712,6 +749,8 @@ const App: React.FC = () => {
 const root = createRoot(document.getElementById('root')!);
 root.render(
   <ErrorBoundary>
-    <App />
+    <ToastProvider>
+      <App />
+    </ToastProvider>
   </ErrorBoundary>
 );
