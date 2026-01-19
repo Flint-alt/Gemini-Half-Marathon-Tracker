@@ -5,27 +5,17 @@ import { RunData, WeightEntry, UserProfile, CoachingInsight } from './types';
 import { TRAINING_PLAN } from './data/trainingPlan';
 import { analyzeRunScreenshot, getCoachingAdvice } from './services/geminiService';
 import { auth, googleProvider, subscribeToNeuralCloud, syncUserData } from './services/firebaseService';
-import { signInWithPopup, signOut, onAuthStateChanged, User } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 import { RunHistory } from './components/RunHistory';
 import { MetricsCharts } from './components/MetricsCharts';
 import { CoachingPanel } from './components/CoachingPanel';
 import { GoalProgress } from './components/GoalProgress';
 import { PersonalRecords } from './components/PersonalRecords';
-import { ErrorBoundary } from './components/ErrorBoundary';
-import { ToastProvider, useToast } from './components/ToastContext';
-import {
-  Upload, Scale, X, Plus, ShieldCheck,
+import { 
+  Upload, Scale, X, Plus, ShieldCheck, 
   LayoutGrid, ChevronUp, ChevronDown,
   Sun, Moon, Route, Timer, Cloud, Copy, Download, UploadCloud, RefreshCw, Check, QrCode, Wifi, WifiOff, LogIn, LogOut, User, Calendar, Terminal, Heart
 } from 'lucide-react';
-import {
-  validateDistance,
-  validateDuration,
-  validateHeartRate,
-  validateWeight,
-  validateDate,
-  calculatePaceSafe
-} from './utils/validation';
 
 const INITIAL_PROFILE: UserProfile = {
   name: "Athlete",
@@ -40,8 +30,7 @@ const INITIAL_PROFILE: UserProfile = {
 };
 
 const App: React.FC = () => {
-  const { showToast } = useToast();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [runs, setRuns] = useState<RunData[]>(() => {
     const saved = localStorage.getItem('neurostride_runs');
     return saved ? JSON.parse(saved) : [];
@@ -87,14 +76,13 @@ const App: React.FC = () => {
 
   const [newWeight, setNewWeight] = useState('');
   const [weightDate, setWeightDate] = useState(new Date().toISOString().split('T')[0]);
-  const [manualRun, setManualRun] = useState({
-    distance: '',
-    duration: '',
+  const [manualRun, setManualRun] = useState({ 
+    distance: '', 
+    duration: '', 
     date: new Date().toISOString().split('T')[0],
     type: 'long' as 'parkrun' | 'long' | 'easy' | 'treadmill' | 'other',
     avgHeartRate: ''
   });
-  const [validationError, setValidationError] = useState<string>('');
 
   const currentWeek = TRAINING_PLAN.find(week => {
     const weekStart = new Date(week.startDate);
@@ -151,47 +139,38 @@ const App: React.FC = () => {
     try {
       const actualCode = payload.includes('?sync=') ? payload.split('?sync=')[1] : payload;
       const decoded = JSON.parse(decodeURIComponent(atob(actualCode)));
-
+      
       if (decoded.runs) setRuns(decoded.runs);
       if (decoded.weights) setWeights(decoded.weights);
       if (decoded.theme) setTheme(decoded.theme);
       if (decoded.layoutOrder) setLayoutOrder(decoded.layoutOrder);
-
+      
       setSyncStatus('teleported');
       setTeleportCode('');
       setTimeout(() => setSyncStatus('idle'), 3000);
-
-      // Show success toast
-      showToast('Data teleported successfully!', 'success');
     } catch (e) {
       console.error("Teleport Failed", e);
       setSyncStatus('error');
-      showToast('Teleport failed. Invalid sync code.', 'error');
     }
   };
 
   const handleLogin = async () => {
     if (!googleProvider) {
-      const msg = "Cloud Sync is in simulation mode because Firebase keys are missing.";
-      alert(msg);
-      showToast(msg, 'info');
+      alert("Cloud Sync is in simulation mode because Firebase keys are missing.");
       return;
     }
     setSyncStatus('connecting');
     try {
       await signInWithPopup(auth, googleProvider);
-      showToast('Successfully connected to Cloud Sync!', 'success');
     } catch (err) {
       console.error(err);
       setSyncStatus('error');
-      showToast('Failed to connect to Cloud Sync', 'error');
     }
   };
 
   const handleLogout = () => {
     if (signOut) signOut(auth);
     else setCurrentUser(null);
-    showToast('Disconnected from Cloud Sync', 'info');
   };
 
   const getSyncPayload = useCallback(() => {
@@ -205,9 +184,6 @@ const App: React.FC = () => {
     navigator.clipboard.writeText(link);
     setSyncStatus('copied');
     setTimeout(() => setSyncStatus('idle'), 3000);
-
-    // Show success toast
-    showToast('Teleport link copied to clipboard!', 'success');
   };
 
   const handleEditRun = (run: RunData) => {
@@ -223,60 +199,16 @@ const App: React.FC = () => {
   };
 
   const handleManualRunSubmit = async () => {
-    // Clear previous errors
-    setValidationError('');
-
-    // Validate all inputs
-    const distanceValidation = validateDistance(manualRun.distance);
-    if (!distanceValidation.isValid) {
-      const error = distanceValidation.error || 'Invalid distance';
-      setValidationError(error);
-      showToast(error, 'error');
-      return;
-    }
-
-    const durationValidation = validateDuration(manualRun.duration);
-    if (!durationValidation.isValid) {
-      const error = durationValidation.error || 'Invalid duration';
-      setValidationError(error);
-      showToast(error, 'error');
-      return;
-    }
-
-    const heartRateValidation = validateHeartRate(manualRun.avgHeartRate);
-    if (!heartRateValidation.isValid) {
-      const error = heartRateValidation.error || 'Invalid heart rate';
-      setValidationError(error);
-      showToast(error, 'error');
-      return;
-    }
-
-    const dateValidation = validateDate(manualRun.date);
-    if (!dateValidation.isValid) {
-      const error = dateValidation.error || 'Invalid date';
-      setValidationError(error);
-      showToast(error, 'error');
-      return;
-    }
-
+    if (!manualRun.distance || !manualRun.duration) return;
     setLoading(true);
-
-    const dist = distanceValidation.value!;
-    const { pace, error: paceError } = calculatePaceSafe(dist, manualRun.duration);
-
-    if (paceError) {
-      setValidationError(paceError);
-      setLoading(false);
-      return;
-    }
-
+    const dist = parseFloat(manualRun.distance);
     const newRunData = {
       distanceKm: dist,
       duration: manualRun.duration,
-      pace,
+      pace: calculatePace(dist, manualRun.duration),
       date: manualRun.date,
       type: manualRun.type,
-      avgHeartRate: heartRateValidation.value
+      avgHeartRate: manualRun.avgHeartRate ? parseInt(manualRun.avgHeartRate) : undefined
     };
 
     let updatedRuns: RunData[];
@@ -295,53 +227,38 @@ const App: React.FC = () => {
     setShowManualRunInput(false);
     setEditingRunId(null);
     setManualRun({ distance: '', duration: '', date: new Date().toISOString().split('T')[0], type: 'long', avgHeartRate: '' });
-
-    // Show success toast
-    showToast(editingRunId ? 'Run updated successfully!' : 'Run logged successfully!', 'success');
-
+    
     try {
       const insight = await getCoachingAdvice(updatedRuns[0], updatedRuns, INITIAL_PROFILE);
       setCoachingInsight(insight);
-    } finally {
-      setLoading(false);
+    } finally { 
+      setLoading(false); 
     }
   };
 
+  const calculatePace = (dist: number, dur: string) => {
+    const parts = dur.split(':').map(Number);
+    let seconds = 0;
+    if (parts.length === 3) seconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+    else if (parts.length === 2) seconds = parts[0] * 60 + parts[1];
+    else seconds = parts[0] || 0;
+    if (dist === 0 || seconds === 0) return "0:00";
+    const paceSec = seconds / dist;
+    return `${Math.floor(paceSec / 60)}:${Math.floor(paceSec % 60).toString().padStart(2, '0')}`;
+  };
+
   const handleWeightSubmit = () => {
-    // Clear previous errors
-    setValidationError('');
-
-    // Validate weight input
-    const weightValidation = validateWeight(newWeight);
-    if (!weightValidation.isValid) {
-      const error = weightValidation.error || 'Invalid weight';
-      setValidationError(error);
-      showToast(error, 'error');
-      return;
-    }
-
-    // Validate date
-    const dateValidation = validateDate(weightDate);
-    if (!dateValidation.isValid) {
-      const error = dateValidation.error || 'Invalid date';
-      setValidationError(error);
-      showToast(error, 'error');
-      return;
-    }
-
+    if (!newWeight) return;
     const entry: WeightEntry = {
       id: Date.now().toString(),
       date: weightDate,
-      weightKg: weightValidation.value!
+      weightKg: parseFloat(newWeight)
     };
     const updatedWeights = [entry, ...weights].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     setWeights(updatedWeights);
     setNewWeight('');
     setWeightDate(new Date().toISOString().split('T')[0]);
     setShowWeightInput(false);
-
-    // Show success toast
-    showToast(`Weight logged: ${weightValidation.value}kg`, 'success');
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -354,62 +271,25 @@ const App: React.FC = () => {
       try {
         const base64Data = (reader.result as string).split(',')[1];
         const extracted = await analyzeRunScreenshot(base64Data);
-
-        // Validate extracted data
-        const distanceKm = extracted.distanceKm || 0;
-        const duration = extracted.duration || "00:00:00";
-
-        // Basic validation - ensure we have reasonable data
-        if (distanceKm <= 0 || distanceKm > 200) {
-          throw new Error('Extracted distance is invalid. Please enter run data manually.');
-        }
-
-        // Validate duration format
-        const durationValidation = validateDuration(duration);
-        if (!durationValidation.isValid) {
-          throw new Error('Extracted duration is invalid. Please enter run data manually.');
-        }
-
-        // Calculate pace safely
-        const { pace, error: paceError } = calculatePaceSafe(distanceKm, duration);
-        if (paceError) {
-          throw new Error('Could not calculate pace. Please enter run data manually.');
-        }
-
-        // Validate heart rate if present
-        if (extracted.avgHeartRate) {
-          const hrValidation = validateHeartRate(extracted.avgHeartRate.toString());
-          if (!hrValidation.isValid) {
-            // Don't fail, just omit invalid heart rate
-            extracted.avgHeartRate = undefined;
-          }
-        }
-
         const newRun: RunData = {
           id: Date.now().toString(),
           date: extracted.date || new Date().toISOString().split('T')[0],
-          distanceKm,
-          duration,
-          pace,
+          distanceKm: extracted.distanceKm || 0,
+          duration: extracted.duration || "00:00:00",
+          pace: extracted.pace || "0:00",
           avgHeartRate: extracted.avgHeartRate,
           source: 'upload',
-          type: distanceKm < 6 ? 'parkrun' : 'long'
+          type: (extracted.distanceKm || 0) < 6 ? 'parkrun' : 'long'
         };
         const updatedRuns = [newRun, ...runs];
         setRuns(updatedRuns);
         const insight = await getCoachingAdvice(newRun, updatedRuns, INITIAL_PROFILE);
         setCoachingInsight(insight);
-
-        // Show success toast
-        showToast('Run extracted from screenshot!', 'success');
-      } catch (err) {
-        console.error(err);
-        const errorMsg = err instanceof Error ? err.message : 'Failed to extract run data from image';
-        setValidationError(errorMsg);
-        showToast(errorMsg, 'error');
-      } finally {
-        setIsUploading(false);
-        setLoading(false);
+      } catch (err) { 
+        console.error(err); 
+      } finally { 
+        setIsUploading(false); 
+        setLoading(false); 
       }
     };
     reader.readAsDataURL(file);
@@ -531,23 +411,23 @@ const App: React.FC = () => {
 
           {/* HIGH VISIBILITY ACTION BUTTONS */}
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => { setShowWeightInput(true); setValidationError(''); }}
+            <button 
+              onClick={() => setShowWeightInput(true)} 
               className={`flex-1 sm:flex-none flex items-center justify-center gap-4 px-10 py-5 rounded-[28px] font-black uppercase text-[12px] tracking-[0.2em] transition-all duration-300 transform hover:scale-[1.03] active:scale-95 shadow-xl ${
-                theme === 'dark'
-                  ? 'bg-rose-500/10 text-rose-400 border-2 border-rose-500/30 hover:bg-rose-500/20 shadow-rose-900/10'
+                theme === 'dark' 
+                  ? 'bg-rose-500/10 text-rose-400 border-2 border-rose-500/30 hover:bg-rose-500/20 shadow-rose-900/10' 
                   : 'bg-white text-rose-600 border-2 border-rose-500/20 hover:border-rose-500/40 shadow-rose-200/50'
               }`}
             >
-              <Scale className="w-5 h-5" />
+              <Scale className="w-5 h-5" /> 
               <span>Weight Tracker</span>
             </button>
 
-            <button
-              onClick={() => { setShowManualRunInput(true); setValidationError(''); }}
+            <button 
+              onClick={() => setShowManualRunInput(true)} 
               className="flex-1 sm:flex-none flex items-center justify-center gap-4 px-12 py-5 rounded-[28px] bg-indigo-600 hover:bg-indigo-500 transition-all duration-300 transform hover:scale-[1.03] active:scale-95 text-white font-black uppercase text-[12px] tracking-[0.2em] shadow-2xl shadow-indigo-500/40 border-2 border-indigo-400/20"
             >
-              <Plus className="w-6 h-6" />
+              <Plus className="w-6 h-6" /> 
               <span>Running Logs</span>
             </button>
           </div>
@@ -655,7 +535,7 @@ const App: React.FC = () => {
                 <h2 className={modalHeaderClass}>{editingRunId ? 'Edit' : 'Log'} Session</h2>
                 <div className="w-12 h-1 bg-indigo-500 mx-auto rounded-full"></div>
               </div>
-              <button onClick={() => { setShowManualRunInput(false); setEditingRunId(null); setValidationError(''); }} className={`p-3 rounded-2xl absolute top-8 right-8 ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}`}><X className="w-6 h-6" /></button>
+              <button onClick={() => { setShowManualRunInput(false); setEditingRunId(null); }} className={`p-3 rounded-2xl absolute top-8 right-8 ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}`}><X className="w-6 h-6" /></button>
             </div>
             <div className="space-y-6 max-h-[70vh] overflow-y-auto no-scrollbar pr-2">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -694,12 +574,6 @@ const App: React.FC = () => {
                 </select>
               </div>
 
-              {validationError && (
-                <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20">
-                  <p className="text-rose-500 text-sm font-bold text-center">{validationError}</p>
-                </div>
-              )}
-
               <button onClick={handleManualRunSubmit} disabled={loading} className="w-full py-6 bg-indigo-600 hover:bg-indigo-500 transition-all text-white font-black uppercase text-xs tracking-[0.3em] rounded-3xl mt-6 shadow-xl shadow-indigo-500/20">
                 {loading ? 'Processing...' : editingRunId ? 'Update Session' : 'Commit to Log'}
               </button>
@@ -716,7 +590,7 @@ const App: React.FC = () => {
                 <h2 className={modalHeaderClass}>Log Mass</h2>
                 <div className="w-12 h-1 bg-rose-500 mx-auto rounded-full"></div>
               </div>
-              <button onClick={() => { setShowWeightInput(false); setValidationError(''); }} className={`p-3 rounded-2xl absolute top-8 right-8 ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}`}><X className="w-6 h-6" /></button>
+              <button onClick={() => setShowWeightInput(false)} className={`p-3 rounded-2xl absolute top-8 right-8 ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}`}><X className="w-6 h-6" /></button>
             </div>
             <div className="space-y-8">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
@@ -729,12 +603,6 @@ const App: React.FC = () => {
                   <input type="date" value={weightDate} onChange={e => setWeightDate(e.target.value)} className={`${modalInputClass} h-32 flex items-center justify-center text-center cursor-pointer`} />
                 </div>
               </div>
-              {validationError && (
-                <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20">
-                  <p className="text-rose-500 text-sm font-bold text-center">{validationError}</p>
-                </div>
-              )}
-
               <button onClick={handleWeightSubmit} className="w-full py-6 bg-rose-600 hover:bg-rose-500 transition-all text-white font-black uppercase text-xs tracking-[0.3em] rounded-3xl shadow-xl shadow-rose-500/20">
                 Update Gradient
               </button>
@@ -747,10 +615,4 @@ const App: React.FC = () => {
 };
 
 const root = createRoot(document.getElementById('root')!);
-root.render(
-  <ErrorBoundary>
-    <ToastProvider>
-      <App />
-    </ToastProvider>
-  </ErrorBoundary>
-);
+root.render(<App />);

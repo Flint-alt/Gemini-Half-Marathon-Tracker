@@ -8,18 +8,6 @@ interface PersonalRecordsProps {
   theme?: 'dark' | 'light';
 }
 
-interface RecordCardProps {
-  title: string;
-  value: string;
-  unit: string;
-  date: string;
-  icon: React.ComponentType<{ className?: string }>;
-  colorClass: string;
-  runId?: string;
-  subLabel?: string;
-  isEmpty?: boolean;
-}
-
 export const PersonalRecords: React.FC<PersonalRecordsProps> = ({ runs, theme = 'dark' }) => {
   const records = useMemo(() => {
     if (runs.length === 0) return null;
@@ -53,7 +41,7 @@ export const PersonalRecords: React.FC<PersonalRecordsProps> = ({ runs, theme = 
   const textPrimary = theme === 'dark' ? 'text-white' : 'text-slate-900';
   const textSecondary = theme === 'dark' ? 'text-slate-500' : 'text-slate-400';
 
-  const RecordCard = ({ title, value, unit, date, icon: Icon, colorClass, runId, subLabel, isEmpty }: RecordCardProps) => (
+  const RecordCard = ({ title, value, unit, date, icon: Icon, colorClass, runId, subLabel, isEmpty }: any) => (
     <button
       onClick={() => !isEmpty && runId && scrollToRun(runId)}
       disabled={isEmpty}

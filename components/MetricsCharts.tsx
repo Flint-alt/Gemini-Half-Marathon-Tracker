@@ -12,28 +12,15 @@ interface MetricsChartsProps {
   theme?: 'dark' | 'light';
 }
 
-interface TooltipEntry {
-  name: string;
-  value: number;
-  color: string;
-}
-
-interface CustomTooltipProps {
-  active?: boolean;
-  payload?: TooltipEntry[];
-  label?: string;
-  theme?: 'dark' | 'light';
-}
-
-const CustomTooltip = ({ active, payload, label, theme }: CustomTooltipProps) => {
+const CustomTooltip = ({ active, payload, label, theme }: any) => {
   if (active && payload && payload.length) {
     // Filter out "Trend" to avoid redundant info in the tooltip
-    const filteredPayload = payload.filter((entry) => entry.name !== 'Trend');
+    const filteredPayload = payload.filter((entry: any) => entry.name !== 'Trend');
     
     return (
       <div className={`backdrop-blur-xl p-5 rounded-2xl border shadow-2xl ${theme === 'dark' ? 'bg-[#1e293b]/95 border-white/10' : 'bg-white/95 border-slate-200'}`}>
         <p className={`text-[10px] font-black uppercase tracking-[0.4em] mb-4 border-b pb-2 ${theme === 'dark' ? 'text-slate-500 border-white/5' : 'text-slate-400 border-slate-100'}`}>{label}</p>
-        {filteredPayload.map((entry, index: number) => {
+        {filteredPayload.map((entry: any, index: number) => {
           const value = entry.value !== undefined && entry.value !== null ? entry.value : 0;
           return (
             <div key={index} className="flex items-center justify-between gap-8 py-1.5">

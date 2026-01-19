@@ -14,55 +14,60 @@ const cleanJson = (text: string) => {
 
 export const analyzeRunScreenshot = async (base64Image: string): Promise<Partial<RunData>> => {
   try {
+    // Correct initialization with named parameter. 
+    // SECURITY: The API key is securely obtained from the environment variable.
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-    // Fixed: contents should be an array directly, not {parts: [...]}
+    
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: [
-        {
-          inlineData: {
-            mimeType: 'image/png',
-            data: base64Image
-          }
-        },
-        {
-          text: `Act as an elite OCR engine for Strava screenshots. Extract the running data precisely.
-
-          Context:
-          - Strava often shows "Distance" in large text.
-          - "Moving Time" or "Time" is the duration.
-          - "Avg Pace" or "Pace" is min/km or min/mi.
-          - If units are in miles (mi), convert them to kilometers (km) (1 mi = 1.60934 km).
-
-          Required JSON Schema:
+      contents: {
+        parts: [
           {
-            "distanceKm": number,
-            "duration": "HH:MM:SS",
-            "pace": "MM:SS",
-            "avgHeartRate": number,
-            "avgCadence": number,
-            "date": "YYYY-MM-DD"
-          }
+            inlineData: {
+              mimeType: 'image/png',
+              data: base64Image
+            }
+          },
+          {
+            text: `Act as an elite OCR engine for Strava screenshots. Extract the running data precisely.
+            
+            Context:
+            - Strava often shows "Distance" in large text.
+            - "Moving Time" or "Time" is the duration.
+            - "Avg Pace" or "Pace" is min/km or min/mi.
+            - If units are in miles (mi), convert them to kilometers (km) (1 mi = 1.60934 km).
+            
+            Required JSON Schema:
+            {
+              "distanceKm": number,
+              "duration": "HH:MM:SS",
+              "pace": "MM:SS",
+              "avgHeartRate": number,
+              "avgCadence": number,
+              "date": "YYYY-MM-DD"
+            }
 
-          If a piece of data is missing, omit the field. Return ONLY the JSON object.`
-        }
-      ]
+            If a piece of data is missing, omit the field. Return ONLY the JSON object.`
+          }
+        ]
+      }
     });
 
+    // Use property access .text (not .text())
     const text = response.text;
     if (!text) throw new Error("Empty response from Neural Engine.");
-
+    
     const cleanedText = cleanJson(text);
     return JSON.parse(cleanedText);
 
-  } catch (error: unknown) {
-    console.error("OCR Analysis failed:", error);
-    const errorObj = error as { status?: number; message?: string };
-    if (errorObj?.status === 403 || errorObj?.message?.includes('permission')) {
+  } catch (error: any) {
+    // SECURITY: Log only the message to prevent potential leakage of request headers containing the API key
+    console.error("OCR Analysis failed:", error instanceof Error ? error.message : "Unknown error");
+    
+    if (error?.status === 403 || error?.message?.includes('permission')) {
       throw new Error("PERMISSION_DENIED: Ensure model name is 'gemini-3-flash-preview' and API key is valid.");
     }
-    throw new Error(errorObj?.message || "Neural Engine failed to parse image.");
+    throw new Error(error.message || "Neural Engine failed to parse image.");
   }
 };
 
@@ -72,7 +77,8 @@ export const getCoachingAdvice = async (
   profile: UserProfile
 ): Promise<CoachingInsight> => {
   try {
-    // Correct initialization with named parameter
+    // Correct initialization with named parameter.
+    // SECURITY: The API key is securely obtained from the environment variable.
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     const prompt = `
@@ -105,8 +111,10 @@ export const getCoachingAdvice = async (
     const text = response.text;
     if (!text) throw new Error("No coaching text returned.");
     return JSON.parse(cleanJson(text));
-  } catch (error) {
-    console.error("Coaching advice failed:", error);
+  } catch (error: any) {
+    // SECURITY: Log only the message to prevent potential leakage of request headers containing the API key
+    console.error("Coaching advice failed:", error instanceof Error ? error.message : "Unknown error");
+    
     return {
       summary: "Run logged successfully.",
       toneCheck: "Neural link offline. Monitor your physical stiffness manually today.",
