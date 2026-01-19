@@ -14,48 +14,45 @@ const cleanJson = (text: string) => {
 
 export const analyzeRunScreenshot = async (base64Image: string): Promise<Partial<RunData>> => {
   try {
-    // Correct initialization with named parameter
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    
+
+    // Fixed: contents should be an array directly, not {parts: [...]}
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: {
-        parts: [
-          {
-            inlineData: {
-              mimeType: 'image/png',
-              data: base64Image
-            }
-          },
-          {
-            text: `Act as an elite OCR engine for Strava screenshots. Extract the running data precisely.
-            
-            Context:
-            - Strava often shows "Distance" in large text.
-            - "Moving Time" or "Time" is the duration.
-            - "Avg Pace" or "Pace" is min/km or min/mi.
-            - If units are in miles (mi), convert them to kilometers (km) (1 mi = 1.60934 km).
-            
-            Required JSON Schema:
-            {
-              "distanceKm": number,
-              "duration": "HH:MM:SS",
-              "pace": "MM:SS",
-              "avgHeartRate": number,
-              "avgCadence": number,
-              "date": "YYYY-MM-DD"
-            }
-
-            If a piece of data is missing, omit the field. Return ONLY the JSON object.`
+      contents: [
+        {
+          inlineData: {
+            mimeType: 'image/png',
+            data: base64Image
           }
-        ]
-      }
+        },
+        {
+          text: `Act as an elite OCR engine for Strava screenshots. Extract the running data precisely.
+
+          Context:
+          - Strava often shows "Distance" in large text.
+          - "Moving Time" or "Time" is the duration.
+          - "Avg Pace" or "Pace" is min/km or min/mi.
+          - If units are in miles (mi), convert them to kilometers (km) (1 mi = 1.60934 km).
+
+          Required JSON Schema:
+          {
+            "distanceKm": number,
+            "duration": "HH:MM:SS",
+            "pace": "MM:SS",
+            "avgHeartRate": number,
+            "avgCadence": number,
+            "date": "YYYY-MM-DD"
+          }
+
+          If a piece of data is missing, omit the field. Return ONLY the JSON object.`
+        }
+      ]
     });
 
-    // Use property access .text (not .text())
     const text = response.text;
     if (!text) throw new Error("Empty response from Neural Engine.");
-    
+
     const cleanedText = cleanJson(text);
     return JSON.parse(cleanedText);
 
