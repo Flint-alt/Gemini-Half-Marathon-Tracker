@@ -56,12 +56,13 @@ export const analyzeRunScreenshot = async (base64Image: string): Promise<Partial
     const cleanedText = cleanJson(text);
     return JSON.parse(cleanedText);
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("OCR Analysis failed:", error);
-    if (error?.status === 403 || error?.message?.includes('permission')) {
+    const errorObj = error as { status?: number; message?: string };
+    if (errorObj?.status === 403 || errorObj?.message?.includes('permission')) {
       throw new Error("PERMISSION_DENIED: Ensure model name is 'gemini-3-flash-preview' and API key is valid.");
     }
-    throw new Error(error.message || "Neural Engine failed to parse image.");
+    throw new Error(errorObj?.message || "Neural Engine failed to parse image.");
   }
 };
 
