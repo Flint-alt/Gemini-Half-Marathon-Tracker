@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { RunData, WeightEntry, UserProfile, CoachingInsight } from './types';
 import { TRAINING_PLAN } from './data/trainingPlan';
@@ -14,7 +14,7 @@ import { PersonalRecords } from './components/PersonalRecords';
 import { 
   Upload, Scale, X, Plus, ShieldCheck, 
   LayoutGrid, ChevronUp, ChevronDown,
-  Sun, Moon, Route, Timer, Cloud, Copy, Download, UploadCloud, RefreshCw, Check, QrCode, Wifi, WifiOff, LogIn, LogOut, User, Calendar, Terminal, Heart
+  Sun, Moon, Route, Timer, Cloud, Copy, Download, UploadCloud, RefreshCw, Check, QrCode, Wifi, WifiOff, LogIn, LogOut, User, Calendar, Terminal, Heart, FileJson, Database
 } from 'lucide-react';
 
 const INITIAL_PROFILE: UserProfile = {
@@ -50,10 +50,11 @@ const App: React.FC = () => {
   const [showWeightInput, setShowWeightInput] = useState(false);
   const [showManualRunInput, setShowManualRunInput] = useState(false);
   const [showSyncPanel, setShowSyncPanel] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<'idle' | 'copied' | 'error' | 'synced' | 'connecting' | 'teleported'>('idle');
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'copied' | 'error' | 'synced' | 'connecting' | 'teleported' | 'imported'>('idle');
   const [editingRunId, setEditingRunId] = useState<string | null>(null);
   const [isArchitectMode, setIsArchitectMode] = useState(false);
   const [teleportCode, setTeleportCode] = useState('');
+  const importFileRef = useRef<HTMLInputElement>(null);
 
   // Self-healing layout logic
   const [layoutOrder, setLayoutOrder] = useState<string[]>(() => {
@@ -134,6 +135,47 @@ const App: React.FC = () => {
     if (theme === 'dark') document.body.classList.add('dark-mode');
     else document.body.classList.remove('dark-mode');
   }, [theme]);
+
+  const handleExportData = () => {
+    const data = {
+      runs,
+      weights,
+      layoutOrder,
+      exportedAt: new Date().toISOString(),
+      version: "1.0.0"
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `outrun_archive_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target?.result as string);
+        if (json.runs) setRuns(json.runs);
+        if (json.weights) setWeights(json.weights);
+        if (json.layoutOrder) setLayoutOrder(json.layoutOrder);
+        
+        setSyncStatus('imported');
+        setTimeout(() => setSyncStatus('idle'), 3000);
+      } catch (err) {
+        console.error("Import failed:", err);
+        setSyncStatus('error');
+      }
+    };
+    reader.readAsText(file);
+  };
 
   const handleTeleport = (payload: string) => {
     try {
@@ -464,7 +506,7 @@ const App: React.FC = () => {
               <button onClick={() => setShowSyncPanel(false)} className={`p-3 rounded-2xl ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}`}><X className="w-6 h-6" /></button>
             </div>
             
-            <div className="space-y-8 max-h-[70vh] overflow-y-auto pr-2 no-scrollbar">
+            <div className="space-y-8 max-h-[70vh] overflow-y-auto px-1 no-scrollbar">
               {!currentUser ? (
                 <div className="p-10 rounded-[40px] bg-indigo-600 text-center text-white">
                   <User className="w-12 h-12 mx-auto mb-6 opacity-40" />
@@ -488,6 +530,40 @@ const App: React.FC = () => {
                 </div>
               )}
 
+              {/* Data Portability Section */}
+              <div className={`p-8 rounded-[32px] border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
+                <div className="flex items-center gap-3 mb-6">
+                  <Database className="w-5 h-5 text-indigo-500" />
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Archive & Portability</h4>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <button 
+                    onClick={handleExportData}
+                    className={`flex flex-col items-center justify-center gap-3 p-6 rounded-3xl border transition-all active:scale-95 ${theme === 'dark' ? 'bg-white/5 border-white/10 hover:bg-white/10 text-white' : 'bg-white border-slate-200 hover:border-indigo-200 text-slate-900'}`}
+                  >
+                    <Download className="w-6 h-6 text-indigo-500" />
+                    <span className="text-[9px] font-black uppercase tracking-widest">Generate Archive</span>
+                  </button>
+                  <button 
+                    onClick={() => importFileRef.current?.click()}
+                    className={`flex flex-col items-center justify-center gap-3 p-6 rounded-3xl border transition-all active:scale-95 ${theme === 'dark' ? 'bg-white/5 border-white/10 hover:bg-white/10 text-white' : 'bg-white border-slate-200 hover:border-emerald-200 text-slate-900'}`}
+                  >
+                    <UploadCloud className="w-6 h-6 text-emerald-500" />
+                    <span className="text-[9px] font-black uppercase tracking-widest">Restore Archive</span>
+                  </button>
+                </div>
+                <input 
+                  type="file" 
+                  ref={importFileRef} 
+                  onChange={handleImportData} 
+                  accept=".json" 
+                  className="hidden" 
+                />
+                {syncStatus === 'imported' && (
+                  <p className="mt-4 text-[9px] font-black uppercase tracking-widest text-emerald-500 text-center animate-pulse">Syncing Restored Data...</p>
+                )}
+              </div>
+
               <div className={`p-8 rounded-[32px] border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
                 <div className="flex items-center gap-3 mb-6">
                   <Terminal className="w-5 h-5 text-indigo-500" />
@@ -508,7 +584,7 @@ const App: React.FC = () => {
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pb-4">
                 <div className="p-8 rounded-[32px] bg-slate-800/20 border border-white/5 text-center">
                    <QrCode className="w-10 h-10 mx-auto mb-4 text-indigo-400" />
                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Device Outbound</h4>
@@ -537,7 +613,7 @@ const App: React.FC = () => {
               </div>
               <button onClick={() => { setShowManualRunInput(false); setEditingRunId(null); }} className={`p-3 rounded-2xl absolute top-8 right-8 ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}`}><X className="w-6 h-6" /></button>
             </div>
-            <div className="space-y-6 max-h-[70vh] overflow-y-auto no-scrollbar pr-2">
+            <div className="space-y-6 max-h-[70vh] overflow-y-auto no-scrollbar px-1">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">Distance (KM)</label>
@@ -592,7 +668,7 @@ const App: React.FC = () => {
               </div>
               <button onClick={() => setShowWeightInput(false)} className={`p-3 rounded-2xl absolute top-8 right-8 ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}`}><X className="w-6 h-6" /></button>
             </div>
-            <div className="space-y-8">
+            <div className="space-y-8 px-1">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4 block">Bodyweight (KG)</label>
