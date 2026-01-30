@@ -14,7 +14,7 @@ import { PersonalRecords } from './components/PersonalRecords';
 import { 
   Upload, Scale, X, Plus, ShieldCheck, 
   LayoutGrid, ChevronUp, ChevronDown,
-  Sun, Moon, Route, Timer, Cloud, Copy, Download, UploadCloud, RefreshCw, Check, QrCode, Wifi, WifiOff, LogIn, LogOut, User, Calendar, Terminal, Heart, FileJson, Database
+  Sun, Moon, Route, Timer, Cloud, Copy, Download, UploadCloud, RefreshCw, Check, QrCode, Wifi, WifiOff, LogIn, LogOut, User, Calendar, Terminal, Heart, FileJson, Database, MessageSquare
 } from 'lucide-react';
 
 const INITIAL_PROFILE: UserProfile = {
@@ -81,8 +81,9 @@ const App: React.FC = () => {
     distance: '', 
     duration: '', 
     date: new Date().toISOString().split('T')[0],
-    type: 'long' as 'parkrun' | 'long' | 'easy' | 'treadmill' | 'other',
-    avgHeartRate: ''
+    type: 'long' as 'parkrun' | 'long' | 'easy' | 'treadmill' | 'interval' | 'other',
+    avgHeartRate: '',
+    notes: ''
   });
 
   const currentWeek = TRAINING_PLAN.find(week => {
@@ -235,7 +236,8 @@ const App: React.FC = () => {
       duration: run.duration,
       date: run.date,
       type: run.type,
-      avgHeartRate: run.avgHeartRate?.toString() || ''
+      avgHeartRate: run.avgHeartRate?.toString() || '',
+      notes: run.notes || ''
     });
     setShowManualRunInput(true);
   };
@@ -250,7 +252,8 @@ const App: React.FC = () => {
       pace: calculatePace(dist, manualRun.duration),
       date: manualRun.date,
       type: manualRun.type,
-      avgHeartRate: manualRun.avgHeartRate ? parseInt(manualRun.avgHeartRate) : undefined
+      avgHeartRate: manualRun.avgHeartRate ? parseInt(manualRun.avgHeartRate) : undefined,
+      notes: manualRun.notes || undefined
     };
 
     let updatedRuns: RunData[];
@@ -268,7 +271,7 @@ const App: React.FC = () => {
     setRuns(updatedRuns);
     setShowManualRunInput(false);
     setEditingRunId(null);
-    setManualRun({ distance: '', duration: '', date: new Date().toISOString().split('T')[0], type: 'long', avgHeartRate: '' });
+    setManualRun({ distance: '', duration: '', date: new Date().toISOString().split('T')[0], type: 'long', avgHeartRate: '', notes: '' });
     
     try {
       const insight = await getCoachingAdvice(updatedRuns[0], updatedRuns, INITIAL_PROFILE);
@@ -423,80 +426,95 @@ const App: React.FC = () => {
     : "w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 text-slate-900 font-black text-xl focus:ring-2 focus:ring-indigo-500 outline-none placeholder:text-slate-400";
 
   const modalHeaderClass = `text-3xl font-black tracking-tighter uppercase mb-2 text-center drop-shadow-sm ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`;
+  
+  // FROSTED GLASS OVERLAY: High z-index and explicit fixed layout to guarantee coverage
+  const modalOverlayClass = `fixed inset-0 z-[2000] flex items-center justify-center p-4 sm:p-6 backdrop-blur-[80px] saturate-[200%] transition-all duration-300 ${theme === 'dark' ? 'bg-slate-950/40' : 'bg-white/40'}`;
 
   return (
-    <div className={`min-h-screen p-4 sm:p-8 lg:p-12 max-w-7xl mx-auto space-y-12`}>
-      <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-10 mb-12 lg:mb-16">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-[18px] lg:rounded-[22px] bg-indigo-500 flex items-center justify-center shadow-2xl shadow-indigo-500/40">
-            <Route className="text-white w-7 h-7 lg:w-8 lg:h-8" />
-          </div>
-          <div>
-            <h1 className={`text-4xl lg:text-5xl font-black tracking-tighter uppercase italic leading-none ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Outrun</h1>
-          </div>
-        </div>
-        
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-6 w-full lg:auto">
-          {/* Controls Bar */}
-          <div className={`flex items-center gap-3 p-2 rounded-[28px] border justify-between sm:justify-start ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200 shadow-sm'}`}>
-            <button onClick={() => setShowSyncPanel(true)} className={`p-4 rounded-[20px] transition-all group flex items-center gap-2 relative ${theme === 'dark' ? 'hover:bg-white/10' : 'hover:bg-slate-50'}`}>
-              <Wifi className={`w-6 h-6 transition-transform ${currentUser ? 'text-emerald-400' : 'text-indigo-400 group-hover:scale-110'}`} />
-            </button>
-            <div className={`w-px h-8 mx-1 hidden sm:block ${theme === 'dark' ? 'bg-white/10' : 'bg-slate-200'}`}></div>
-            <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className={`p-4 rounded-[20px] transition-all ${theme === 'dark' ? 'hover:bg-white/10' : 'hover:bg-slate-50'}`}>
-              {theme === 'dark' ? <Sun className="w-6 h-6 text-amber-400" /> : <Moon className="w-6 h-6 text-indigo-600" />}
-            </button>
-            <button onClick={() => setIsArchitectMode(!isArchitectMode)} className={`p-4 rounded-[20px] transition-all ${isArchitectMode ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30' : 'text-slate-400 hover:bg-white/10'}`}>
-              <LayoutGrid className="w-6 h-6" />
-            </button>
-          </div>
-
-          {/* HIGH VISIBILITY ACTION BUTTONS */}
+    <>
+      <div className={`min-h-screen p-4 sm:p-8 lg:p-12 max-w-7xl mx-auto space-y-12`}>
+        <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-10 mb-12 lg:mb-16">
           <div className="flex items-center gap-4">
-            <button 
-              onClick={() => setShowWeightInput(true)} 
-              className={`flex-1 sm:flex-none flex items-center justify-center gap-4 px-10 py-5 rounded-[28px] font-black uppercase text-[12px] tracking-[0.2em] transition-all duration-300 transform hover:scale-[1.03] active:scale-95 shadow-xl ${
-                theme === 'dark' 
-                  ? 'bg-rose-500/10 text-rose-400 border-2 border-rose-500/30 hover:bg-rose-500/20 shadow-rose-900/10' 
-                  : 'bg-white text-rose-600 border-2 border-rose-500/20 hover:border-rose-500/40 shadow-rose-200/50'
-              }`}
-            >
-              <Scale className="w-5 h-5" /> 
-              <span>Weight Tracker</span>
-            </button>
-
-            <button 
-              onClick={() => setShowManualRunInput(true)} 
-              className="flex-1 sm:flex-none flex items-center justify-center gap-4 px-12 py-5 rounded-[28px] bg-indigo-600 hover:bg-indigo-500 transition-all duration-300 transform hover:scale-[1.03] active:scale-95 text-white font-black uppercase text-[12px] tracking-[0.2em] shadow-2xl shadow-indigo-500/40 border-2 border-indigo-400/20"
-            >
-              <Plus className="w-6 h-6" /> 
-              <span>Running Logs</span>
-            </button>
+            <div className="w-12 h-12 lg:w-14 lg:h-14 rounded-[18px] lg:rounded-[22px] bg-indigo-500 flex items-center justify-center shadow-2xl shadow-indigo-500/40">
+              <Route className="text-white w-7 h-7 lg:w-8 lg:h-8" />
+            </div>
+            <div>
+              <h1 className={`text-4xl lg:text-5xl font-black tracking-tighter uppercase italic leading-none ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Outrun</h1>
+            </div>
           </div>
-        </div>
-      </header>
+          
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-6 w-full lg:auto">
+            {/* Controls Bar */}
+            <div className={`flex items-center gap-3 p-2 rounded-[28px] border justify-between sm:justify-start ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white border-slate-200 shadow-sm'}`}>
+              <button onClick={() => setShowSyncPanel(true)} className={`p-4 rounded-[20px] transition-all group flex items-center gap-2 relative ${theme === 'dark' ? 'hover:bg-white/10' : 'hover:bg-slate-50'}`}>
+                <Wifi className={`w-6 h-6 transition-transform ${currentUser ? 'text-emerald-400' : 'text-indigo-400 group-hover:scale-110'}`} />
+              </button>
+              <div className={`w-px h-8 mx-1 hidden sm:block ${theme === 'dark' ? 'bg-white/10' : 'bg-slate-200'}`}></div>
+              <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className={`p-4 rounded-[20px] transition-all ${theme === 'dark' ? 'hover:bg-white/10' : 'hover:bg-slate-50'}`}>
+                {theme === 'dark' ? <Sun className="w-6 h-6 text-amber-400" /> : <Moon className="w-6 h-6 text-indigo-600" />}
+              </button>
+              <button onClick={() => setIsArchitectMode(!isArchitectMode)} className={`p-4 rounded-[20px] transition-all ${isArchitectMode ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30' : 'text-slate-400 hover:bg-white/10'}`}>
+                <LayoutGrid className="w-6 h-6" />
+              </button>
+            </div>
 
-      <GoalProgress goals={INITIAL_PROFILE.goals} theme={theme} />
+            {/* HIGH VISIBILITY ACTION BUTTONS */}
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={() => setShowWeightInput(true)} 
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-4 px-10 py-5 rounded-[28px] font-black uppercase text-[12px] tracking-[0.2em] transition-all duration-300 transform hover:scale-[1.03] active:scale-95 shadow-xl ${
+                  theme === 'dark' 
+                    ? 'bg-rose-500/10 text-rose-400 border-2 border-rose-500/30 hover:bg-rose-500/20 shadow-rose-900/10' 
+                    : 'bg-white text-rose-600 border-2 border-rose-500/20 hover:border-rose-500/40 shadow-rose-200/50'
+                }`}
+              >
+                <Scale className="w-5 h-5" /> 
+                <span>Weight Tracker</span>
+              </button>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-        <div className="lg:col-span-8 space-y-12">
-          {layoutOrder.map((id, idx) => renderMainItem(id, idx))}
-        </div>
-        <div className="lg:col-span-4 space-y-12">
-          <CoachingPanel insight={coachingInsight} loading={loading} theme={theme} />
-          <div className="premium-glass rounded-[40px] p-10">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.4em] mb-8 text-indigo-400">Bio-Ingestion</h3>
-            <label className="flex flex-col items-center justify-center p-12 rounded-[32px] border-2 border-dashed border-white/10 hover:border-indigo-500/50 transition-all cursor-pointer group">
-              <RefreshCw className={`w-10 h-10 mb-4 transition-all group-hover:scale-110 ${isUploading ? 'animate-spin text-indigo-400' : 'text-slate-600'}`} />
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 text-center">Sync Strava Visual</p>
-              <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
-            </label>
+              <button 
+                onClick={() => setShowManualRunInput(true)} 
+                className="flex-1 sm:flex-none flex items-center justify-center gap-4 px-12 py-5 rounded-[28px] bg-indigo-600 hover:bg-indigo-500 transition-all duration-300 transform hover:scale-[1.03] active:scale-95 text-white font-black uppercase text-[12px] tracking-[0.2em] shadow-2xl shadow-indigo-500/40 border-2 border-indigo-400/20"
+              >
+                <Plus className="w-6 h-6" /> 
+                <span>Log Run</span>
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <GoalProgress goals={INITIAL_PROFILE.goals} theme={theme} />
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+          <div className="lg:col-span-8 space-y-12">
+            {layoutOrder.map((id, idx) => renderMainItem(id, idx))}
+          </div>
+          <div className="lg:col-span-4 space-y-12">
+            <CoachingPanel insight={coachingInsight} loading={loading} theme={theme} />
+            <div className="premium-glass rounded-[40px] p-10">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.4em] mb-8 text-indigo-400">Fitbit Sync</h3>
+              <label className="flex flex-col items-center justify-center p-12 rounded-[32px] border-2 border-dashed border-white/10 hover:border-indigo-500/50 transition-all cursor-pointer group">
+                <RefreshCw className={`w-10 h-10 mb-4 transition-all group-hover:scale-110 ${isUploading ? 'animate-spin text-indigo-400' : 'text-slate-600'}`} />
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 text-center">Sync Fitbit Visual</p>
+                <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+              </label>
+            </div>
           </div>
         </div>
       </div>
 
+      {/* Floating Action Button (FAB) */}
+      <button 
+        onClick={() => setShowManualRunInput(true)}
+        aria-label="Log Run"
+        className="fixed bottom-8 right-8 z-[1000] w-16 h-16 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-2xl shadow-indigo-500/40 transition-all duration-300 hover:scale-110 active:scale-90 hover:bg-indigo-500 group border-2 border-white/10"
+      >
+        <Plus className="w-8 h-8 transition-transform group-hover:rotate-90" />
+      </button>
+
+      {/* Modals outside the main container to ensure absolute top-level viewport coverage */}
       {showSyncPanel && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-2xl bg-slate-950/80">
+        <div className={modalOverlayClass}>
           <div className={`premium-glass rounded-[48px] p-10 w-full max-w-xl border shadow-2xl animate-in zoom-in duration-300 ${theme === 'dark' ? 'border-white/10' : 'border-white/40'}`}>
              <div className="flex justify-between items-center mb-8">
               <div className="flex items-center gap-4">
@@ -530,7 +548,6 @@ const App: React.FC = () => {
                 </div>
               )}
 
-              {/* Data Portability Section */}
               <div className={`p-8 rounded-[32px] border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-200'}`}>
                 <div className="flex items-center gap-3 mb-6">
                   <Database className="w-5 h-5 text-indigo-500" />
@@ -604,8 +621,8 @@ const App: React.FC = () => {
       )}
 
       {showManualRunInput && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-2xl bg-slate-950/80">
-          <div className={`premium-glass rounded-[48px] p-10 w-full max-w-xl border shadow-2xl animate-in zoom-in duration-300 ${theme === 'dark' ? 'border-white/10' : 'border-white/40'}`}>
+        <div className={modalOverlayClass}>
+          <div className={`premium-glass rounded-[48px] p-6 sm:p-10 w-full max-w-xl border shadow-2xl animate-in zoom-in duration-300 ${theme === 'dark' ? 'border-white/10' : 'border-white/40'}`}>
             <div className="flex justify-between items-center mb-10">
               <div className="flex-1">
                 <h2 className={modalHeaderClass}>{editingRunId ? 'Edit' : 'Log'} Session</h2>
@@ -613,7 +630,7 @@ const App: React.FC = () => {
               </div>
               <button onClick={() => { setShowManualRunInput(false); setEditingRunId(null); }} className={`p-3 rounded-2xl absolute top-8 right-8 ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}`}><X className="w-6 h-6" /></button>
             </div>
-            <div className="space-y-6 max-h-[70vh] overflow-y-auto no-scrollbar px-1">
+            <div className="space-y-6 max-h-[70vh] overflow-y-auto no-scrollbar px-2">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">Distance (KM)</label>
@@ -643,11 +660,24 @@ const App: React.FC = () => {
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block">Session Profile</label>
                 <select value={manualRun.type} onChange={e => setManualRun({...manualRun, type: e.target.value as any})} className={modalInputClass}>
                   <option value="long">Long Run</option>
+                  <option value="interval">Interval</option>
                   <option value="parkrun">Parkrun</option>
                   <option value="easy">Easy</option>
                   <option value="treadmill">Treadmill</option>
                   <option value="other">Other</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3 block flex items-center gap-2">
+                  <MessageSquare className="w-3.5 h-3.5" /> Comments
+                </label>
+                <textarea 
+                  value={manualRun.notes} 
+                  onChange={e => setManualRun({...manualRun, notes: e.target.value})} 
+                  placeholder="How did you feel? Any spasticity or breakthrough energy?"
+                  className={`${modalInputClass} min-h-[120px] resize-none text-base font-medium placeholder:font-black placeholder:uppercase placeholder:text-[10px] placeholder:tracking-widest`}
+                />
               </div>
 
               <button onClick={handleManualRunSubmit} disabled={loading} className="w-full py-6 bg-indigo-600 hover:bg-indigo-500 transition-all text-white font-black uppercase text-xs tracking-[0.3em] rounded-3xl mt-6 shadow-xl shadow-indigo-500/20">
@@ -659,7 +689,7 @@ const App: React.FC = () => {
       )}
 
       {showWeightInput && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-2xl bg-slate-950/80">
+        <div className={modalOverlayClass}>
           <div className={`premium-glass rounded-[48px] p-10 w-full max-w-xl border shadow-2xl animate-in zoom-in duration-300 ${theme === 'dark' ? 'border-white/10' : 'border-white/40'}`}>
             <div className="flex justify-between items-center mb-10">
               <div className="flex-1">
@@ -668,7 +698,7 @@ const App: React.FC = () => {
               </div>
               <button onClick={() => setShowWeightInput(false)} className={`p-3 rounded-2xl absolute top-8 right-8 ${theme === 'dark' ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-100 hover:bg-slate-200'}`}><X className="w-6 h-6" /></button>
             </div>
-            <div className="space-y-8 px-1">
+            <div className="space-y-8 px-2">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                 <div>
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4 block">Bodyweight (KG)</label>
@@ -686,7 +716,7 @@ const App: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 

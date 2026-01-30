@@ -9,7 +9,7 @@ interface RunHistoryProps {
   theme?: 'dark' | 'light';
 }
 
-type RunFilter = 'all' | 'parkrun' | 'long' | 'easy' | 'treadmill' | 'other';
+type RunFilter = 'all' | 'parkrun' | 'long' | 'easy' | 'treadmill' | 'interval' | 'other';
 
 export const RunHistory: React.FC<RunHistoryProps> = ({ runs, onEditRun, theme = 'dark' }) => {
   const [filter, setFilter] = useState<RunFilter>('all');
@@ -26,6 +26,7 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ runs, onEditRun, theme =
     long: runs.filter(r => r.type === 'long').length,
     easy: runs.filter(r => r.type === 'easy').length,
     treadmill: runs.filter(r => r.type === 'treadmill').length,
+    interval: runs.filter(r => r.type === 'interval').length,
     other: runs.filter(r => r.type === 'other').length,
   };
 
@@ -62,6 +63,7 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ runs, onEditRun, theme =
         <FilterChip type="all" label="All Units" />
         <FilterChip type="parkrun" label="Parkrun" />
         <FilterChip type="long" label="Long Run" />
+        <FilterChip type="interval" label="Interval" />
         <FilterChip type="easy" label="Easy" />
         <FilterChip type="treadmill" label="Treadmill" />
         <FilterChip type="other" label="Other" />
@@ -97,6 +99,7 @@ export const RunHistory: React.FC<RunHistoryProps> = ({ runs, onEditRun, theme =
                       run.type === 'parkrun' ? 'bg-amber-500/10 text-amber-500' : 
                       run.type === 'long' ? 'bg-indigo-500/10 text-indigo-500' :
                       run.type === 'treadmill' ? 'bg-rose-500/10 text-rose-500' :
+                      run.type === 'interval' ? 'bg-fuchsia-500/10 text-fuchsia-500' :
                       'bg-slate-700/50 text-slate-400'
                     }`}>
                       {run.type}

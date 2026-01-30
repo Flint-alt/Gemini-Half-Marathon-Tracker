@@ -1,3 +1,4 @@
+
 export interface RunData {
   id: string;
   date: string;
@@ -8,7 +9,7 @@ export interface RunData {
   avgCadence?: number;
   notes?: string;
   source: 'manual' | 'upload';
-  type: 'parkrun' | 'long' | 'easy' | 'treadmill' | 'other';
+  type: 'parkrun' | 'long' | 'easy' | 'treadmill' | 'interval' | 'other';
   completedGym?: boolean;
   bodyweightCount?: number;
 }
